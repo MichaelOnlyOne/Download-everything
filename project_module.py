@@ -11,7 +11,7 @@ def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL',
             __import__(module.replace('-', '_'))
         except ImportError:
             pip_name = 'pillow' if module == 'PIL' else module
-            print(f"Sorry didn't you dowload {pip_name}, but dowloading strarts")
+            print(f"Sorry didn't you download {pip_name}, but downloading strarts")
             subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name, "--quiet"])
 check_and_download_modules()
 from moviepy.video.io.VideoFileClip import VideoFileClip
@@ -25,14 +25,15 @@ import mutagen
 
 class dirs_paths():
     __base_dir__ = os.path.dirname(os.path.abspath(__file__))
-    bin = os.path.join(__base_dir__,'bin')
+    bin = os.path.join(__base_dir__,'.bin')
     Playlists = os.path.join(__base_dir__,"Playlists")
     Videos = os.path.join(__base_dir__,"Videos")
     Music = os.path.join(__base_dir__,"Music")
     Covers = os.path.join(__base_dir__,"Covers")
-    confs = os.path.join(__base_dir__,"conf")
+    confs = os.path.join(__base_dir__,".conf")
     inputs = os.path.join(__base_dir__,"Input Files")
     Youtube_Covers = os.path.join(__base_dir__,"Covers","Youtube")
+    YoutubeMusic_Covers = os.path.join(__base_dir__,"Covers","YoutubeMusic")
     SoundCloud_Covers = os.path.join(__base_dir__,"Covers","SoundCloud")
     Rutube_Videos = os.path.join(__base_dir__,"Videos","Rutube")
     Youtube_Videos = os.path.join(__base_dir__,"Videos","Youtube")
@@ -313,6 +314,51 @@ def download_youtube_cover(url, filename=None):
         except Exception as e:
             print(f"Не удалось обработать обложку YouTube: {e}")
     return None
+def download_youtubemusic_cover(url, filename=None):
+    if filename is None:
+        filename = url_to_filename.youtube_video(url)
+    filename = makesafename(filename)
+
+    full_path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")
+    os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
+
+    img_file = download_youtube_cover(url, filename)
+    
+    if img_file and os.path.exists(img_file):
+        try:
+            import numpy as np
+            with Image.open(img_file) as img:
+                img = img.convert("RGB")
+                width, height = img.size
+                
+                if width > height:
+                    img_np = np.array(img)
+                    crop_needed = width - height
+                    left_margin = crop_needed // 2
+                    right_margin = width - (crop_needed - left_margin)
+                    
+                    left_zone = img_np[:, :left_margin]
+                    right_zone = img_np[:, right_margin:]
+                    
+                    is_left_empty = np.std(left_zone) < 15
+                    is_right_empty = np.std(right_zone) < 15
+                    
+                    if is_left_empty and is_right_empty:
+                        img_final = img.crop((left_margin, 0, right_margin, height))
+                    else:
+                        bg_color = img.getpixel((0, 0)) 
+                        img_final = Image.new("RGB", (width, width), bg_color)
+                        img_final.paste(img, (0, (width - height) // 2))
+                else:
+                    img_final = img
+                
+                img_final.save(full_path, "JPEG", quality=95)
+                print(f"Обложка обработана и сохранена в YoutubeMusic_Covers: {full_path}")
+                return full_path
+        except Exception as e:
+            print(f"Не удалось обработать и сохранить обложку: {e}")
+            
+    return None
 
 def download_rutube_video(url, filename=None):
     if filename is None:
@@ -443,25 +489,7 @@ def download_youtube_track_with_info(url,SavePath=dirs_paths.Youtube_Music, cust
         print("Ошибка: MP3 файл YouTube не был создан.")
         return None
 
-    img_file = download_youtube_cover(url, filename)
-    if img_file and os.path.exists(img_file):
-        try:
-            with Image.open(img_file) as img:
-                width, height = img.size
-                min_side = min(width, height)
-                
-                # Вычисляем координаты центрального квадрата
-                left = (width - min_side) // 2
-                top = (height - min_side) // 2
-                right = (width + min_side) // 2
-                bottom = (height + min_side) // 2
-                
-                # Обрезаем и перезаписываем файл в максимальном качестве
-                img_cropped = img.crop((left, top, right, bottom))
-                img_cropped.save(img_file, "JPEG", quality=95)
-        except Exception as e:
-            print(f"Не удалось сделать обложку квадратной: {e}")
-
+    img_file = download_youtubemusic_cover(url, filename)
     print("Заполнение метаданных YouTube...")
     try:
         try:
