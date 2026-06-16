@@ -271,17 +271,22 @@ class url_to_filename:
             return "soundcloud_playlist"
 
 
-def download_soundcloud_cover(url, filename=None):
-    if filename is None:
-        filename = url_to_filename.soundcloud_track(url)
-
+def download_soundcloud_cover(url):
+    filename = url_to_filename.soundcloud_track(url)
     filename = makesafename(filename)
+
+    full_path = os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")
+
+    if os.path.exists(full_path):
+        print(f"Обложка SoundCloud уже существует, пропускаем: {full_path}")
+        return full_path
+
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
         info = ydl.extract_info(url, download=False)
     img_url = info.get('thumbnail')
     
     if img_url:
-        full_path = os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")
+        os.makedirs(dirs_paths.SoundCloud_Covers, exist_ok=True)
         try:
             response = requests.get(img_url)
             img = Image.open(BytesIO(response.content))
@@ -292,18 +297,22 @@ def download_soundcloud_cover(url, filename=None):
         except Exception as e:
             print(f"Не удалось обработать обложку SoundCloud: {e}")
     return None
-def download_youtube_cover(url, filename=None):
-    if filename is None:
-        filename = url_to_filename.youtube_video(url)
-
+def download_youtube_cover(url):
+    filename = url_to_filename.youtube_video(url)
     filename = makesafename(filename)
+
+    full_path = os.path.join(dirs_paths.Youtube_Covers, f"{filename}_cover.jpg")
+
+    if os.path.exists(full_path):
+        print(f"Обложка YouTube уже существует, пропускаем: {full_path}")
+        return full_path
 
     with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
         info = ydl.extract_info(url, download=False)
     img_url = info.get('thumbnail')
     
     if img_url:
-        full_path = os.path.join(dirs_paths.Youtube_Covers, f"{filename}_cover.jpg")
+        os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
         try:
             response = requests.get(img_url)
             img = Image.open(BytesIO(response.content))
@@ -315,13 +324,16 @@ def download_youtube_cover(url, filename=None):
             print(f"Не удалось обработать обложку YouTube: {e}")
     return None
 def download_youtubemusic_cover(url, filename=None):
-    if filename is None:
-        filename = url_to_filename.youtube_video(url)
+    filename = url_to_filename.youtube_video(url)
     filename = makesafename(filename)
 
     full_path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")
-    os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
 
+    if os.path.exists(full_path):
+        print(f"Обложка YoutubeMusic уже существует, пропускаем: {full_path}")
+        return full_path
+
+    os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
     img_file = download_youtube_cover(url, filename)
     
     if img_file and os.path.exists(img_file):
@@ -356,41 +368,57 @@ def download_youtubemusic_cover(url, filename=None):
                 print(f"Обложка обработана и сохранена в YoutubeMusic_Covers: {full_path}")
                 return full_path
         except Exception as e:
-            print(f"Не удалось обработать и сохранить обложку: {e}")
+            print(f"Не удалось обработать и保存ить обложку: {e}")
             
     return None
 
-def download_rutube_video(url, filename=None):
-    if filename is None:
-        filename = url_to_filename.rutube_video(url)
+def download_rutube_video(url):
+    filename = url_to_filename.rutube_video(url)
     filename = makesafename(filename)
     
     save_path = os.path.join(dirs_paths.Rutube_Videos, f"{filename}.%(ext)s")
+    
+    import glob
+    existing_files = glob.glob(os.path.join(dirs_paths.Rutube_Videos, f"{filename}.*"))
+    if existing_files:
+        print(f"Видео Rutube уже существует, пропускаем: {existing_files[0]}")
+        return existing_files[0]
+        
+    os.makedirs(dirs_paths.Rutube_Videos, exist_ok=True)
     opts = ydl_opts.rutube_video_track
     opts['outtmpl'] = save_path
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
-def download_youtube_video(url, filename=None):
-    if filename is None:
-        filename = url_to_filename.youtube_video(url)
-
+def download_youtube_video(url):
+    filename = url_to_filename.youtube_video(url)
     filename = makesafename(filename)
 
     save_path = os.path.join(dirs_paths.Youtube_Videos, f"{filename}.%(ext)s")
     
+    import glob
+    existing_files = glob.glob(os.path.join(dirs_paths.Youtube_Videos, f"{filename}.*"))
+    if existing_files:
+        print(f"Видео YouTube уже существует, пропускаем: {existing_files[0]}")
+        return existing_files[0]
+
+    os.makedirs(dirs_paths.Youtube_Videos, exist_ok=True)
     opts = ydl_opts.youtube_video_track
     opts['outtmpl'] = save_path
-    
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
-def download_soundcloud_mp3(url,SavePath=dirs_paths.SoundCloud_Music, filename=None):
-    if filename is None:
-        filename = url_to_filename.soundcloud_track(url)
-    print(filename)
+def download_soundcloud_mp3(url):
+    filename = url_to_filename.soundcloud_track(url)
     filename = makesafename(filename)
 
-    save_path = os.path.join(SavePath, f"{filename}.%(ext)s")
+    final_mp3_path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
+
+    if os.path.exists(final_mp3_path):
+        print(f"Трек SoundCloud уже существует, пропускаем: {final_mp3_path}")
+        return final_mp3_path
+
+    os.makedirs(dirs_paths.SoundCloud_Music, exist_ok=True)
+    save_path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.%(ext)s")
     
     opts = ydl_opts.soundcloud_audio_track
     opts['outtmpl'] = save_path
@@ -398,47 +426,49 @@ def download_soundcloud_mp3(url,SavePath=dirs_paths.SoundCloud_Music, filename=N
     print(f"Скачивание MP3 с SoundCloud: {filename}...")
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
-        return os.path.join(os.path.join(SavePath, f"{filename}.mp3"))
+        return final_mp3_path
     return None
-def download_youtube_mp3(url,SavePath=dirs_paths.Youtube_Music, filename=None):
-    if filename is None:
-        filename = url_to_filename.youtube_track(url)
-
+def download_youtube_mp3(url):
+    filename = url_to_filename.youtube_track(url)
     filename = makesafename(filename)
 
-    save_path = os.path.join(SavePath, f"{filename}.%(ext)s")
+    final_mp3_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
+
+    if os.path.exists(final_mp3_path):
+        print(f"Трек YouTube уже существует, пропускаем: {final_mp3_path}")
+        return final_mp3_path
+
+    os.makedirs(dirs_paths.Youtube_Music, exist_ok=True)
+    save_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.%(ext)s")
     
     opts = ydl_opts.youtube_audio_track.copy()
     opts['outtmpl'] = save_path
     
     with yt_dlp.YoutubeDL(opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        predicted_path = ydl.prepare_filename(info_dict)
-        final_mp3_path = os.path.splitext(predicted_path)[0] + '.mp3'
         ydl.download([url])
         return final_mp3_path
-        
     return None
 
-def download_soundcloud_track_with_info(url,SavePath=dirs_paths.SoundCloud_Music, custom_filename=None):
+def download_soundcloud_track_with_info(url):
+    filename = url_to_filename.soundcloud_track(url)
+    filename = makesafename(filename)
+
+    mp3_file = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
+
+    if os.path.exists(mp3_file):
+        print(f"Трек SoundCloud уже существует, пропускаем метаданные: {mp3_file}")
+        return mp3_file
+
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
         info = ydl.extract_info(url, download=False)
-    
-    try:
-        if custom_filename is not None:
-            filename = custom_filename
-        else:
-            filename = url_to_filename.soundcloud_track(url)
-    except Exception:
-        filename = "soundcloud_track"
-    download_soundcloud_mp3(url,SavePath, filename)
-    mp3_file = os.path.join(SavePath, f"{filename}.mp3")
-    
+
+    download_soundcloud_mp3(url)
+
     if not os.path.exists(mp3_file):
         print(f"Ошибка: MP3 файл {mp3_file} SoundCloud не был создан.")
         return None
 
-    img_file = download_soundcloud_cover(url, filename)
+    img_file = download_soundcloud_cover(url)
     
     print("Заполнение метаданных SoundCloud...")
     try:
@@ -462,34 +492,28 @@ def download_soundcloud_track_with_info(url,SavePath=dirs_paths.SoundCloud_Music
         print("Обложка и теги успешно вшиты в MP3!")
     except Exception as e:
         print(f"Не удалось записать теги: {e}")
-    ''' 
-    if img_file and os.path.exists(img_file):
-        os.remove(img_file)
-    '''
+
     return mp3_file
-def download_youtube_track_with_info(url,SavePath=dirs_paths.Youtube_Music, custom_filename=None):
+def download_youtube_track_with_info(url):
+    filename = url_to_filename.youtube_track(url)
+    filename = makesafename(filename)
+
+    mp3_file = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
+
+    if os.path.exists(mp3_file):
+        print(f"Трек YouTube уже существует, пропускаем метаданные: {mp3_file}")
+        return mp3_file
+
     with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
         info = ydl.extract_info(url, download=False)
         
-    video_id = info.get('id', 'unknown_id')
+    download_youtube_mp3(url)
     
-    try:
-        if custom_filename is not None:
-            filename = custom_filename
-        else:
-            filename = url_to_filename.youtube_track(url)
-            
-        filename = makesafename(filename)
-    except Exception:
-        filename = "youtube_track"
-
-    mp3_file = download_youtube_mp3(url,SavePath, filename)
-    
-    if mp3_file is None or not os.path.exists(mp3_file):
+    if not os.path.exists(mp3_file):
         print("Ошибка: MP3 файл YouTube не был создан.")
         return None
 
-    img_file = download_youtubemusic_cover(url, filename)
+    img_file = download_youtubemusic_cover(url)
     print("Заполнение метаданных YouTube...")
     try:
         try:
@@ -512,10 +536,7 @@ def download_youtube_track_with_info(url,SavePath=dirs_paths.Youtube_Music, cust
         print("Обложка и теги успешно вшиты в MP3!")
     except Exception as e:
         print(f"Не удалось записать теги: {e}")
-    '''
-    if img_file and os.path.exists(img_file):
-        os.remove(img_file)
-    '''
+
     return mp3_file
 
 
@@ -538,20 +559,16 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
     
     if save_to_folder:
         target_dir = os.path.join(dirs_paths.SoundCloud_Music, safe_name)
-        if not os.path.exists(target_dir):
-            os.makedirs(target_dir)
+        os.makedirs(target_dir, exist_ok=True)
     else:
         target_dir = dirs_paths.SoundCloud_Music
-
 
     entries = list(playlist_info['entries'])
     total_tracks = len(entries)
     padding_width = len(str(total_tracks))
 
     print(f"\nНачало обработки плейлиста: {playlist_title} (Всего треков: {total_tracks})")
-    
     for index, entry in enumerate(entries, start=1):
-        time.sleep(1)
         try:
             if not entry:
                 continue
@@ -562,33 +579,63 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
                 
             str_index = str(index).zfill(padding_width)
             
-            mp3_file = download_soundcloud_track_with_info(track_url,target_dir)
+            filename = url_to_filename.soundcloud_track(track_url)
+            filename = makesafename(filename)
+            mp3_file = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
+
+            if os.path.exists(mp3_file):
+                time.sleep(2)
+            else:
+                time.sleep(1)
+                download_soundcloud_mp3(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
+                if not os.path.exists(os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")):
+                    img_file = download_soundcloud_cover(track_url)
+                else:
+                    img_file = os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")
+
+                import shutil
+                current_name = os.path.basename(mp3_file)
+                
                 if add_index_to_filename:
-                    current_name = os.path.basename(mp3_file)
                     new_name = f"{str_index} {current_name}"
-                    new_file_path = os.path.join(target_dir, new_name)
-                    if os.path.exists(new_file_path):
-                        os.remove(new_file_path)
-                    os.rename(mp3_file, new_file_path)
-                    mp3_file = new_file_path
+                else:
+                    new_name = current_name
+                    
+                target_file_path = os.path.join(target_dir, new_name)
+                
+                if save_to_folder or add_index_to_filename:
+                    if os.path.exists(target_file_path):
+                        os.remove(target_file_path)
+                    shutil.copy(mp3_file, target_file_path)
+                    mp3_file = target_file_path
 
                 if use_album_meta:
                     try:
                         audio = mutagen.id3.ID3(mp3_file)
-                        actual_title = audio.get('TIT2').text[0] if audio.get('TIT2') else "Track"
+                        audio.delete()
+                        audio = mutagen.id3.ID3()
                         
-                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {actual_title}"))
+                        audio.add(mutagen.id3.TPE1(encoding=3, text=entry.get('uploader', 'Unknown Author')))  
+                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {entry.get('title', 'Track')}"))
                         audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
+                        
+                        if img_file and os.path.exists(img_file):
+                            with open(img_file, 'rb') as f:
+                                audio.add(mutagen.id3.APIC(
+                                    encoding=3, mime='image/jpeg', type=3, desc='Front Cover', data=f.read()
+                                ))
                         audio.save(mp3_file, v2_version=3)
                     except Exception as e:
                         print(f"Не удалось скорректировать альбомные теги: {e}")
         except Exception as trackerror:
             print(f"{trackerror}\nwith\n{track_url}")
+
     print(f"\nСкачивание плейлиста завершено!")
     return True
+
 def create_soundcloud_m3u_playlist(url, music_dir=""):
     conf_file = files_paths.SoundCloud_Music_dir_conf
     
@@ -629,6 +676,7 @@ def create_soundcloud_m3u_playlist(url, music_dir=""):
 
         full_path = os.path.normpath(os.path.join(music_dir, f"{filename}.mp3"))
         m3u_content += f"{full_path}\n"
+        time.sleep(3)
 
     try:
         with open(m3u_file_path, 'w', encoding='utf-8') as f:
@@ -707,13 +755,11 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
     playlist_id = playlist_info.get('id', 'unknown_id')
     
-    # Получаем имя плейлиста через созданный класс для YouTube
     safe_name = url_to_filename.youtube_playlist(url)
     
     if save_to_folder:
         target_dir = os.path.join(dirs_paths.Youtube_Music, safe_name)
-        if not os.path.exists(target_dir):
-            os.makedirs(target_dir)
+        os.makedirs(target_dir, exist_ok=True)
     else:
         target_dir = dirs_paths.Youtube_Music
 
@@ -734,23 +780,31 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
         str_index = str(index).zfill(padding_width)
         
         try:
-            mp3_file = download_youtube_track_with_info(track_url, target_dir)
+            base_mp3 = download_youtube_track_with_info(track_url)
 
-            if mp3_file and os.path.exists(mp3_file):
+            if base_mp3 and os.path.exists(base_mp3):
+                import shutil
+                current_name = os.path.basename(base_mp3)
+                
                 if add_index_to_filename:
-                    current_name = os.path.basename(mp3_file)
                     new_name = f"{str_index} {current_name}"
-                    new_file_path = os.path.join(target_dir, new_name)
+                else:
+                    new_name = current_name
                     
-                    if os.path.exists(new_file_path):
-                        os.remove(new_file_path)
-                    os.rename(mp3_file, new_file_path)
-                    mp3_file = new_file_path
+                target_file_path = os.path.join(target_dir, new_name)
+                
+                if save_to_folder or add_index_to_filename:
+                    if os.path.exists(target_file_path):
+                        os.remove(target_file_path)
+                    shutil.copy(base_mp3, target_file_path)
+                    mp3_file = target_file_path
+                else:
+                    mp3_file = base_mp3
 
                 if use_album_meta:
                     try:
                         audio = mutagen.id3.ID3(mp3_file)
-                        actual_title = audio.get('TIT2').text[0] if audio.get('TIT2') else "Track"
+                        actual_title = audio.get('TIT2').text if audio.get('TIT2') else "Track"
                         
                         audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {actual_title}"))
                         audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
