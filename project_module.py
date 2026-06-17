@@ -37,6 +37,7 @@ class dirs_paths():
     SoundCloud_Covers = os.path.join(__base_dir__,"Covers","SoundCloud")
     Rutube_Videos = os.path.join(__base_dir__,"Videos","Rutube")
     Youtube_Videos = os.path.join(__base_dir__,"Videos","Youtube")
+    VK_Videos = os.path.join(__base_dir__,"Videos","VK")
     Youtube_Music = os.path.join(__base_dir__,"Music","Youtube")
     SoundCloud_Music = os.path.join(__base_dir__,"Music","SoundCloud")
     SoundCloud_Playlists = os.path.join(__base_dir__,"Playlists","SoundCloud")
@@ -134,6 +135,18 @@ class ydl_opts():
         **_base,
         'skip_download': True,
     }
+    vk_video_track = {
+        **_base,
+        'noplaylist': True,
+        'format': 'best[ext=mp4]/best',
+        'format_sort': ['proto:https', 'ext:mp4:m4a'],
+    }
+
+    vk_info = {
+        **_base,
+        'noplaylist': True,
+        'skip_download': True,
+    }
 
 check_and_create_dirs_and_files()
 
@@ -189,7 +202,7 @@ class url_to_filename:
                 info = ydl.extract_info(url, download=False)
             video_title = info.get('title', 'Untitled Video')
             v_id = info.get('id', 'unknown_id')
-            return makesafename(f"{video_title} [{v_id}]")
+            return f"{makesafename(video_title)} [{v_id}]"
         except Exception:
             return "youtube_video"
     @staticmethod
@@ -251,10 +264,20 @@ class url_to_filename:
                 info = ydl.extract_info(url, download=False)
             video_id = info.get('id', 'unknown_id')
             video_title = info.get('title', 'Untitled Video')
-            return makesafename(f"{video_title} [{video_id}]")
+            return f"{makesafename(video_title)} [{video_id}]"
         except Exception:
             return "rutube_video"
 
+    @staticmethod
+    def vk_video(url):
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts.vk_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+            video_id = info.get('id', 'unknown_id')
+            video_title = info.get('title', 'Untitled Video')
+            return f"{makesafename(video_title)} [{video_id}]"
+        except Exception:
+            return "vk_video"
 
     @staticmethod
     def soundcloud_track(url):
@@ -283,11 +306,37 @@ class url_to_filename:
                     playlist_id = match.group(0)
                 else:
                     playlist_id = playlist_id.replace(':', '-')
-            return makesafename(f"{playlist_id} {playlist_title}")
+            return f"{playlist_id} {makesafename(playlist_title)}"
+        except Exception:
+            return "soundcloud_playlist"
+    @staticmethod
+    def soundcloud_playlist_for_info(url):
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+            playlist_title = info.get('title', 'Untitled Playlist')
+            playlist_id = str(info.get('id', 'unknown_id'))
+            if ":" in playlist_id:
+                match = re.search(r'\b\d{5,}\b', playlist_id)
+                if match:
+                    playlist_id = match.group(0)
+                else:
+                    playlist_id = playlist_id.replace(':', '-')
+            return f"{makesafename(playlist_title)} {playlist_id} "
         except Exception:
             return "soundcloud_playlist"
 
-
+    @staticmethod
+    def youtube_playlist_for_info(url):
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+            playlist_title = info.get('title', 'Untitled Playlist')
+            playlist_id = info.get('id', 'unknown_id')
+            return f"{makesafename(playlist_title)} {playlist_id} "
+        except Exception:
+            return "youtube_playlist"
 def download_soundcloud_cover(url):
     filename = url_to_filename.soundcloud_track(url)
     filename = makesafename(filename)
@@ -426,6 +475,25 @@ def download_rutube_video(url):
     opts['outtmpl'] = save_path
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
+
+def download_vk_video(url):
+    filename = url_to_filename.vk_video(url)
+    filename = makesafename(filename)
+    
+    save_path = os.path.join(dirs_paths.VK_Videos, f"{filename}.%(ext)s")
+    
+    import glob
+    existing_files = glob.glob(os.path.join(dirs_paths.VK_Videos, f"{filename}.*"))
+    if existing_files:
+        print(f"Видео VK уже существует, пропускаем: {existing_files[0]}")
+        return existing_files[0]
+        
+    os.makedirs(dirs_paths.VK_Videos, exist_ok=True)
+    opts = ydl_opts.vk_video_track
+    opts['outtmpl'] = save_path
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+
 def download_youtube_video(url):
     filename = url_to_filename.youtube_video(url)
     filename = makesafename(filename)
@@ -586,15 +654,9 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
     if not playlist_info or 'entries' not in playlist_info:
         print("Ошибка: Не удалось загрузить информацию о плейлисте.")
         return None
-        
-    playlist_title = playlist_info.get('title', 'Untitled Playlist')
-    playlist_id = str(playlist_info.get('id', 'unknown_id'))
-    if ":" in playlist_id:
-        match = re.search(r'\b\d{5,}\b', playlist_id)
-        playlist_id = match.group(0) if match else playlist_id.replace(':', '-')
-   
+
     safe_name = url_to_filename.soundcloud_playlist(url)
-    
+    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url)
     if save_to_folder:
         target_dir = os.path.join(dirs_paths.SoundCloud_Music, safe_name)
         os.makedirs(target_dir, exist_ok=True)
@@ -604,6 +666,7 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
     entries = list(playlist_info['entries'])
     total_tracks = len(entries)
     padding_width = len(str(total_tracks))
+    playlist_title = playlist_info.get('title', 'Untitled Playlist')
 
     print(f"\nНачало обработки плейлиста: {playlist_title} (Всего треков: {total_tracks})")
     for index, entry in enumerate(entries, start=1):
@@ -622,9 +685,9 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
             mp3_file = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
 
             if os.path.exists(mp3_file):
-                time.sleep(2)
+                time.sleep(3)
             else:
-                time.sleep(1)
+                time.sleep(5)
                 download_soundcloud_track_with_info(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
@@ -660,7 +723,7 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
                         orig_title = str(audio.get('TIT2', entry.get('title', 'Track')))
                         audio.add(mutagen.id3.TPE1(encoding=3, text=orig_artist))  
                         audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {orig_title}"))
-                        audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
+                        audio.add(mutagen.id3.TALB(encoding=3, text=playlist_unique_title))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
                         
                         if img_file and os.path.exists(img_file):
@@ -710,8 +773,6 @@ def create_soundcloud_m3u_playlist(url, music_dir=""):
         track_url = entry.get('url') or entry.get('webpage_url') or entry.get('url_transparent')
         if not track_url:
             continue
-
-        # ИСПОЛЬЗУЕМ ЗДЕСЬ: получаем имя трека через класс без ручной нарезки URL
         filename = url_to_filename.soundcloud_track(track_url)
 
         full_path = os.path.normpath(os.path.join(music_dir, f"{filename}.mp3"))
@@ -776,7 +837,8 @@ def create_youtube_m3u_playlist(url, music_dir=""):
 
         full_path = os.path.normpath(os.path.join(music_dir, f"{filename}.mp3"))
         m3u_content += f"{full_path}\n"
-
+        time.sleep(3)
+        
     try:
         with open(m3u_file_path, 'w', encoding='utf-8') as f:
             f.write(m3u_content)
@@ -792,7 +854,6 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
         return None
         
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
-    playlist_id = playlist_info.get('id', 'unknown_id')
     
     safe_name = url_to_filename.youtube_playlist(url)
     
@@ -805,6 +866,7 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
     entries = list(playlist_info['entries'])
     total_tracks = len(entries)
     padding_width = len(str(total_tracks))
+    playlist_title = playlist_info.get('title', 'Untitled Playlist')
 
     print(f"\nНачало обработки плейлиста YouTube: {playlist_title} (Всего треков: {total_tracks})")
     
@@ -843,7 +905,7 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
                         audio = mutagen.id3.ID3()
                         
                         audio.add(mutagen.id3.TPE1(encoding=3, text=entry.get('uploader', 'Unknown Author')))  
-                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {entry.get('title', 'Untitled Video')}"))
+                        audio.add(mutagen.id3.TIT2(encoding=3, text=playlist_unique_title))
                         audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
                         
