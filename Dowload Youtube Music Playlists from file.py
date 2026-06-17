@@ -28,7 +28,8 @@ def main():
         try:
             if Params[3]:
                 project_module.create_youtube_m3u_playlist(url,music_dir)
-            project_module.download_youtube_music_playlist(url,Params[0],Params[1],Params[2])
+            else:
+                project_module.download_youtube_music_playlist(url,Params[0],Params[1],Params[2])
         except:
             print(f"Что то пошло не так с {url}")
 main()

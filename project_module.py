@@ -687,7 +687,7 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
             if os.path.exists(mp3_file):
                 time.sleep(3)
             else:
-                time.sleep(5)
+                time.sleep(10)
                 download_soundcloud_track_with_info(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
@@ -854,7 +854,8 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
         return None
         
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
-    
+
+    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url)
     safe_name = url_to_filename.youtube_playlist(url)
     
     if save_to_folder:
