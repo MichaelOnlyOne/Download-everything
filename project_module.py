@@ -590,7 +590,6 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
     playlist_id = str(playlist_info.get('id', 'unknown_id'))
     if ":" in playlist_id:
-        import re
         match = re.search(r'\b\d{5,}\b', playlist_id)
         playlist_id = match.group(0) if match else playlist_id.replace(':', '-')
    
@@ -626,7 +625,7 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
                 time.sleep(2)
             else:
                 time.sleep(1)
-                download_soundcloud_mp3(track_url)
+                download_soundcloud_track_with_info(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
                 if not os.path.exists(os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")):
@@ -652,12 +651,15 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
 
                 if use_album_meta:
                     try:
-                        audio = mutagen.id3.ID3(mp3_file)
-                        audio.delete()
-                        audio = mutagen.id3.ID3()
-                        
-                        audio.add(mutagen.id3.TPE1(encoding=3, text=entry.get('uploader', 'Unknown Author')))  
-                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {entry.get('title', 'Track')}"))
+                        try:
+                            audio = mutagen.id3.ID3(mp3_file)
+                        except mutagen.id3.ID3NoHeaderError:
+                            audio = mutagen.id3.ID3()
+
+                        orig_artist = str(audio.get('TPE1', entry.get('uploader', 'Unknown Author')))
+                        orig_title = str(audio.get('TIT2', entry.get('title', 'Track')))
+                        audio.add(mutagen.id3.TPE1(encoding=3, text=orig_artist))  
+                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {orig_title}"))
                         audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
                         
@@ -674,7 +676,6 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
 
     print(f"\nСкачивание плейлиста завершено!")
     return True
-
 def create_soundcloud_m3u_playlist(url, music_dir=""):
     conf_file = files_paths.SoundCloud_Music_dir_conf
     
