@@ -14,7 +14,7 @@ def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL',
             print(f"Sorry didn't you download {pip_name}, but downloading strarts")
             subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name, "--quiet"])
 check_and_download_modules()
-from PIL import Image
+from PIL import Image, ImageChops
 import yt_dlp
 import requests
 import re
@@ -213,7 +213,6 @@ def inputnumber(a,b=None):
             print("Введи натуральное число")
             continue
         val = int(inp)
-        # range(1, count+1) проверяет строго от 1 до count
         if val not in range(a, b+1): 
             print(f"Введи число в диапазоне {a}-{b}")
             continue
@@ -408,11 +407,23 @@ def download_youtube_cover(url):
             print(f"[YouTube Cover] Скачивание картинки через requests...")
             response = requests.get(img_url, timeout=5)
             print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
-            
             img = Image.open(BytesIO(response.content))
             img = img.convert('RGB')
+            
             img.save(full_path, 'JPEG')
-            print(f"[YouTube Cover] Базовая обложка успешно сохранена: {full_path}")
+            print(f"[YouTube Cover] Исходная обложка сохранена: {full_path}")
+            
+            with Image.open(full_path) as saved_img:
+                if abs(saved_img.width / saved_img.height - 1.333) < 0.05:
+                    print("[YouTube Cover] Неправильное соотношение сторон. Обрезаем до 16:9...")
+                    target_width = int(saved_img.height * (16 / 9))
+                    left = (saved_img.width - target_width) // 2
+                    right = left + target_width
+                    
+                    cropped_img = saved_img.crop((left, 0, right, saved_img.height))
+                    cropped_img.save(full_path, 'JPEG')
+                    print(f"[YouTube Cover] Файл успешно отредактирован и перезаписан: {full_path}")
+
             return full_path
         except Exception as e:
             print(f"[YouTube Cover] Ошибка при скачивании/сохранении файла: {e}")
