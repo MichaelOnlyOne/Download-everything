@@ -23,52 +23,89 @@ import regex
 import mutagen
 
 
-class dirs_paths():
-    __base_dir__ = os.path.dirname(os.path.abspath(__file__))
-    bin = os.path.join(__base_dir__,'.bin')
-    Playlists = os.path.join(__base_dir__,"Playlists")
-    Videos = os.path.join(__base_dir__,"Videos")
-    Music = os.path.join(__base_dir__,"Music")
-    Covers = os.path.join(__base_dir__,"Covers")
-    confs = os.path.join(__base_dir__,".conf")
-    inputs = os.path.join(__base_dir__,"Input Files")
-    Youtube_Covers = os.path.join(__base_dir__,"Covers","Youtube")
-    YoutubeMusic_Covers = os.path.join(__base_dir__,"Covers","YoutubeMusic")
-    SoundCloud_Covers = os.path.join(__base_dir__,"Covers","SoundCloud")
-    Rutube_Videos = os.path.join(__base_dir__,"Videos","Rutube")
-    Youtube_Videos = os.path.join(__base_dir__,"Videos","Youtube")
-    VK_Videos = os.path.join(__base_dir__,"Videos","VK")
-    Youtube_Music = os.path.join(__base_dir__,"Music","Youtube")
-    SoundCloud_Music = os.path.join(__base_dir__,"Music","SoundCloud")
-    SoundCloud_Playlists = os.path.join(__base_dir__,"Playlists","SoundCloud")
-    Youtube_Playlists = os.path.join(__base_dir__,"Playlists","Youtube")
-class files_paths():
-    SoundCloud_Music_dir_conf = os.path.join(dirs_paths.confs,"SoundCloud"+" Music Storage.txt")
-    Youtube_Music_dir_conf = os.path.join(dirs_paths.confs,"Youtube"+" Music Storage.txt")
-    SoundCloud_Playlists_links = os.path.join(dirs_paths.inputs,"SoundCloud"+" Playlists links.txt")
-    Youtube_Music_Playlists_links = os.path.join(dirs_paths.inputs,"Youtube Music"+" Playlists links.txt")
-    Youtube_Videos_links = os.path.join(dirs_paths.inputs,"Youtube"+" Videos links.txt")
-    Rutube_Videos_links = os.path.join(dirs_paths.inputs,"Rutube"+" Videos links.txt")
-    log = os.path.join(dirs_paths.__base_dir__,"log.txt")
+
+import os
+
 def write_if_empty(file_path, text):
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(text)
-def check_and_create_dirs_and_files():
-    for attr in dir(dirs_paths):
-        if not attr.startswith('__'):
-            folder_path = getattr(dirs_paths, attr)
-            if isinstance(folder_path, str):
-                if not os.path.exists(folder_path):
-                    os.makedirs(folder_path)
-    write_if_empty(files_paths.SoundCloud_Music_dir_conf, "Music/SoundCloud")
-    write_if_empty(files_paths.Youtube_Music_dir_conf, "Music/Youtube")
+
+def _get_abs_or_rel(path, base):
+    if os.path.isabs(path):
+        return path
+    return os.path.abspath(os.path.join(base, path))
+
+class dirs_paths():
+    __base_dir__ = os.path.dirname(os.path.abspath(__file__))
     
-    write_if_empty(files_paths.SoundCloud_Playlists_links, "# Вставьте сюда ссылки на плейлисты SoundCloud\n")
-    write_if_empty(files_paths.Youtube_Music_Playlists_links, "# Вставьте сюда ссылки на плейлисты Youtube Music\n")
-    write_if_empty(files_paths.Youtube_Videos_links, "# Вставьте сюда ссылки на видео Youtube\n")
-    write_if_empty(files_paths.Rutube_Videos_links, "# Вставьте сюда ссылки на видео Rutube\n")
-    write_if_empty(files_paths.log, "log\n")
+    bin = os.path.join(__base_dir__, '.bin')
+    confs = os.path.join(__base_dir__, '.conf')
+    inputs = os.path.join(__base_dir__, 'Input Files')
+    
+    for path in [bin, confs, inputs]:
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+class files_paths():
+    SoundCloud_Music_dir_conf = os.path.join(dirs_paths.confs, "SoundCloud Music Storage.txt")
+    Youtube_Music_dir_conf = os.path.join(dirs_paths.confs, "Youtube Music Storage.txt")
+    Video_Path_Conf = os.path.join(dirs_paths.confs, "Video Save Path.txt")
+    Music_Path_Conf = os.path.join(dirs_paths.confs, "Music Save Path.txt")
+    Cover_Path_Conf = os.path.join(dirs_paths.confs, "Cover Save Path.txt")
+    Playlist_Path_Conf = os.path.join(dirs_paths.confs, "Playlist Save Path.txt")
+    SoundCloud_Playlists_links = os.path.join(dirs_paths.inputs, "SoundCloud Playlists links.txt")
+    Youtube_Music_Playlists_links = os.path.join(dirs_paths.inputs, "Youtube Music Playlists links.txt")
+    Youtube_Videos_links = os.path.join(dirs_paths.inputs, "Youtube Videos links.txt")
+    Rutube_Videos_links = os.path.join(dirs_paths.inputs, "Rutube Videos links.txt")
+    log = os.path.join(dirs_paths.__base_dir__, "log.txt")
+
+write_if_empty(files_paths.SoundCloud_Music_dir_conf, "Music/SoundCloud")
+write_if_empty(files_paths.Youtube_Music_dir_conf, "Music/Youtube")
+write_if_empty(files_paths.Video_Path_Conf, "Videos")
+write_if_empty(files_paths.Music_Path_Conf, "Music")
+write_if_empty(files_paths.Cover_Path_Conf, "Covers")
+write_if_empty(files_paths.Playlist_Path_Conf, "Playlists")
+
+with open(files_paths.Video_Path_Conf, 'r', encoding='utf-8') as f:
+    dirs_paths.Videos = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
+    print(dirs_paths.Videos)
+
+with open(files_paths.Music_Path_Conf, 'r', encoding='utf-8') as f:
+    dirs_paths.Music = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
+    print(dirs_paths.Music)
+
+with open(files_paths.Cover_Path_Conf, 'r', encoding='utf-8') as f:
+    dirs_paths.Covers = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
+    print(dirs_paths.Covers)
+
+with open(files_paths.Playlist_Path_Conf, 'r', encoding='utf-8') as f:
+    dirs_paths.Playlists = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
+    print(dirs_paths.Playlists)
+
+dirs_paths.Youtube_Covers = os.path.join(dirs_paths.Covers, "Youtube")
+dirs_paths.YoutubeMusic_Covers = os.path.join(dirs_paths.Covers, "YoutubeMusic")
+dirs_paths.SoundCloud_Covers = os.path.join(dirs_paths.Covers, "SoundCloud")
+dirs_paths.Rutube_Videos = os.path.join(dirs_paths.Videos, "Rutube")
+dirs_paths.Youtube_Videos = os.path.join(dirs_paths.Videos, "Youtube")
+dirs_paths.VK_Videos = os.path.join(dirs_paths.Videos, "VK")
+dirs_paths.Youtube_Music = os.path.join(dirs_paths.Music, "Youtube")
+dirs_paths.SoundCloud_Music = os.path.join(dirs_paths.Music, "SoundCloud")
+dirs_paths.SoundCloud_Playlists = os.path.join(dirs_paths.Playlists, "SoundCloud")
+dirs_paths.Youtube_Playlists = os.path.join(dirs_paths.Playlists, "Youtube")
+
+for attr in dir(dirs_paths):
+    if not attr.startswith('__'):
+        folder_path = getattr(dirs_paths, attr)
+        if isinstance(folder_path, str) and not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+write_if_empty(files_paths.SoundCloud_Playlists_links, "# Вставьте сюда ссылки на плейлисты SoundCloud\n")
+write_if_empty(files_paths.Youtube_Music_Playlists_links, "# Вставьте сюда ссылки на плейлисты Youtube Music\n")
+write_if_empty(files_paths.Youtube_Videos_links, "# Вставьте сюда ссылки на видео Youtube\n")
+write_if_empty(files_paths.Rutube_Videos_links, "# Вставьте сюда ссылки на видео Rutube\n")
+write_if_empty(files_paths.log, "")
+
 
 class ydl_opts():
     _base = {
@@ -148,8 +185,6 @@ class ydl_opts():
         'skip_download': True,
     }
 
-check_and_create_dirs_and_files()
-
 def read_links_from_file(file_path):
     links = []
     if not os.path.exists(file_path):
@@ -172,18 +207,20 @@ def read_links_from_file(file_path):
                 links.append(clean_line)
                 
     return links
-def inputnumber(count):
+def inputnumber(a,b=None):
+    if b == None:
+        b,a = a,1
     while True:
         inp = input("> ")
         if not inp.isdigit():
-            print("Введи число")
+            print("Введи натуральное число")
             continue
         val = int(inp)
         # range(1, count+1) проверяет строго от 1 до count
-        if val not in range(1, count+1): 
-            print(f"Введи число в диапазоне 1-{count}")
+        if val not in range(a, b+1): 
+            print(f"Введи число в диапазоне {a}-{b}")
             continue
-        return val # Возвращаем то, что ввел юзер, а не count!
+        return val
 def makesafename(safe_name):
     safe_name = safe_name.replace('/', '-').replace('\\', '-').replace(':', ' -')
     safe_name = regex.sub(r'[^\p{L}\p{N}\s\-\_ \(\)\[\]]', '', safe_name)
@@ -207,11 +244,7 @@ class url_to_filename:
             return "youtube_video"
     @staticmethod
     def youtube_track(url):
-        log_file = None
         try:
-            log_file = open(files_paths.log, "a", encoding="utf-8")
-            log_file.write(f"[START] Получен URL: {url}\n")
-            log_file.flush()
             
             track_opts = ydl_opts.youtube_info.copy()
             track_opts['noplaylist'] = True
