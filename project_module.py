@@ -454,8 +454,9 @@ def download_youtubemusic_cover(url):
                     left_zone = img_np[:, :left_margin]
                     right_zone = img_np[:, right_margin:]
                     
-                    is_left_empty = np.std(left_zone) < 15
-                    is_right_empty = np.std(right_zone) < 15
+                    is_left_empty = np.all(np.std(left_zone, axis=(0, 1)) < 15)
+                    is_right_empty = np.all(np.std(right_zone, axis=(0, 1)) < 15)
+
                     print(f"[YT Music Cover] Анализ пустоты по бокам: Лево={is_left_empty}, Право={is_right_empty}")
                     
                     if is_left_empty and is_right_empty:
