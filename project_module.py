@@ -5,7 +5,7 @@ import time
 from io import BytesIO
 from urllib.parse import urlparse, parse_qs
 
-def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL', 'regex', 'moviepy']):
+def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL', 'regex']):
     for module in modules:
         try:
             __import__(module.replace('-', '_'))
@@ -14,7 +14,6 @@ def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL',
             print(f"Sorry didn't you download {pip_name}, but downloading strarts")
             subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name, "--quiet"])
 check_and_download_modules()
-from moviepy.video.io.VideoFileClip import VideoFileClip
 from PIL import Image
 import yt_dlp
 import requests
