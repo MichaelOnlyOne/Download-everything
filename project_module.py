@@ -55,6 +55,7 @@ class files_paths():
     Playlist_Path_Conf = os.path.join(dirs_paths.confs, "Playlist Save Path.txt")
     SoundCloud_Playlists_links = os.path.join(dirs_paths.inputs, "SoundCloud Playlists links.txt")
     Youtube_Music_Playlists_links = os.path.join(dirs_paths.inputs, "Youtube Music Playlists links.txt")
+    Youtube_Music_links = os.path.join(dirs_paths.inputs, "Youtube Music links.txt")
     Youtube_Videos_links = os.path.join(dirs_paths.inputs, "Youtube Videos links.txt")
     Rutube_Videos_links = os.path.join(dirs_paths.inputs, "Rutube Videos links.txt")
     log = os.path.join(dirs_paths.__base_dir__, "log.txt")
@@ -68,19 +69,15 @@ write_if_empty(files_paths.Playlist_Path_Conf, "Playlists")
 
 with open(files_paths.Video_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Videos = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
-    print(dirs_paths.Videos)
 
 with open(files_paths.Music_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Music = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
-    print(dirs_paths.Music)
 
 with open(files_paths.Cover_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Covers = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
-    print(dirs_paths.Covers)
 
 with open(files_paths.Playlist_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Playlists = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
-    print(dirs_paths.Playlists)
 
 dirs_paths.Youtube_Covers = os.path.join(dirs_paths.Covers, "Youtube")
 dirs_paths.YoutubeMusic_Covers = os.path.join(dirs_paths.Covers, "YoutubeMusic")
@@ -101,6 +98,7 @@ for attr in dir(dirs_paths):
 
 write_if_empty(files_paths.SoundCloud_Playlists_links, "# Вставьте сюда ссылки на плейлисты SoundCloud\n")
 write_if_empty(files_paths.Youtube_Music_Playlists_links, "# Вставьте сюда ссылки на плейлисты Youtube Music\n")
+write_if_empty(files_paths.Youtube_Music_links, "# Вставьте сюда ссылки на треки Youtube Music\n")
 write_if_empty(files_paths.Youtube_Videos_links, "# Вставьте сюда ссылки на видео Youtube\n")
 write_if_empty(files_paths.Rutube_Videos_links, "# Вставьте сюда ссылки на видео Rutube\n")
 write_if_empty(files_paths.log, "")
@@ -244,7 +242,6 @@ class url_to_filename:
     @staticmethod
     def youtube_track(url):
         try:
-            
             track_opts = ydl_opts.youtube_info.copy()
             track_opts['noplaylist'] = True
             
@@ -268,16 +265,9 @@ class url_to_filename:
                 if username.startswith('@'):
                     username = username[1:]       
             result = makesafename(f"{username} {v_id}")
-            log_file.write(f"[SUCCESS] Сгенерировано имя: {result}\n")
             return result
-        except Exception as e:
-            if log_file:
-                log_file.write(f"[ERROR] Сбой в методе youtube_track для URL {url}: {str(e)}\n")
+        except Exception:
             return "youtube_track"
-        finally:
-            if log_file:
-                log_file.close()
-
     @staticmethod
     def youtube_playlist(url):
         try:
@@ -473,7 +463,7 @@ def download_youtubemusic_cover(url):
                         img_final = img.crop((left_margin, 0, right_margin, height))
                     else:
                         print("[YT Music Cover] Обнаружены детали по бокам. Достраиваем полями сверху/снизу...")
-                        bg_color = img.getpixel((0, 0)) 
+                        bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
                         img_final = Image.new("RGB", (width, width), bg_color)
                         img_final.paste(img, (0, (width - height) // 2))
                 else:
