@@ -414,16 +414,52 @@ def download_youtube_cover(url):
             print(f"[YouTube Cover] Исходная обложка сохранена: {full_path}")
             
             with Image.open(full_path) as saved_img:
-                if abs(saved_img.width / saved_img.height - 1.333) < 0.05:
-                    print("[YouTube Cover] Неправильное соотношение сторон. Обрезаем до 16:9...")
-                    target_width = int(saved_img.height * (16 / 9))
-                    left = (saved_img.width - target_width) // 2
-                    right = left + target_width
+                import numpy as np
+                w, h = saved_img.width, saved_img.height
+                current_ratio = w / h
+                
+                if abs(current_ratio - 1.333) < 0.05:
+                    img_np = np.array(saved_img)
                     
-                    cropped_img = saved_img.crop((left, 0, right, saved_img.height))
-                    cropped_img.save(full_path, 'JPEG')
-                    print(f"[YouTube Cover] Файл успешно отредактирован и перезаписан: {full_path}")
+                    row_stds = np.std(img_np, axis=(1, 2))
+                    row_means = np.mean(img_np, axis=(1, 2))
+                    is_black_row = (row_stds < 12) & (row_means < 15)
+                    
+                    top_black_lines = 0
+                    for row in is_black_row:
+                        if row:
+                            top_black_lines += 1
+                        else:
+                            break
+                            
+                    bottom_black_lines = 0
+                    for row in reversed(is_black_row):
+                        if row:
+                            bottom_black_lines += 1
+                        else:
+                            break
+                            
+                    col_stds = np.std(img_np, axis=(0, 2))
+                    col_means = np.mean(img_np, axis=(0, 2))
+                    is_black_col = (col_stds < 12) & (col_means < 15)
+                    
+                    left_black_lines = 0
+                    for col in is_black_col:
+                        if col:
+                            left_black_lines += 1
+                        else:
+                            break
+                            
+                    right_black_lines = 0
+                    for col in reversed(is_black_col):
+                        if col:
+                            right_black_lines += 1
+                        else:
+                            break
 
+                    if top_black_lines > 0 or bottom_black_lines > 0 or left_black_lines > 0 or right_black_lines > 0:
+                        cropped_img = saved_img.crop((left_black_lines, top_black_lines, w - right_black_lines, h - bottom_black_lines))
+                        cropped_img.save(full_path, 'JPEG')
             return full_path
         except Exception as e:
             print(f"[YouTube Cover] Ошибка при скачивании/сохранении файла: {e}")
@@ -478,8 +514,32 @@ def download_youtubemusic_cover(url):
                         bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
                         img_final = Image.new("RGB", (width, width), bg_color)
                         img_final.paste(img, (0, (width - height) // 2))
+                        
+                elif width < height:
+                    print("[YT Music Cover] Картинка вертикальная. Начало анализа верхних и нижних полей...")
+                    img_np = np.array(img)
+                    crop_needed = height - width
+                    top_margin = crop_needed // 2
+                    bottom_margin = height - (crop_needed - top_margin)
+                    
+                    top_zone = img_np[:top_margin, :]
+                    bottom_zone = img_np[bottom_margin:, :]
+                    
+                    is_top_empty = np.all(np.std(top_zone, axis=(0, 1)) < 15)
+                    is_bottom_empty = np.all(np.std(bottom_zone, axis=(0, 1)) < 15)
+                    
+                    print(f"[YT Music Cover] Анализ пустоты сверху/снизу: Верх={is_top_empty}, Низ={is_bottom_empty}")
+                    
+                    if is_top_empty and is_bottom_empty:
+                        print("[YT Music Cover] Сверху и снизу пусто. Обрезаем картинку под квадрат...")
+                        img_final = img.crop((0, top_margin, width, bottom_margin))
+                    else:
+                        print("[YT Music Cover] Обнаружены детали сверху/снизу. Достраиваем полями по бокам...")
+                        bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
+                        img_final = Image.new("RGB", (height, height), bg_color)
+                        img_final.paste(img, ((height - width) // 2, 0))
                 else:
-                    print("[YT Music Cover] Картинка уже квадратная или вертикальная. Оставляем оригинал.")
+                    print("[YT Music Cover] Картинка уже квадратная. Оставляем оригинал.")
                     img_final = img
                 
                 img_final.save(full_path, "JPEG", quality=95)
@@ -491,6 +551,7 @@ def download_youtubemusic_cover(url):
         print(f"[YT Music Cover] Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
             
     return None
+
 
 def download_rutube_video(url):
     filename = url_to_filename.rutube_video(url)
