@@ -13,7 +13,7 @@ def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL',
             pip_name = 'pillow' if module == 'PIL' else module
             print(f"Sorry didn't you download {pip_name}, but downloading strarts")
             subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name, "--quiet"])
-check_and_download_modules()
+
 from PIL import Image, ImageChops
 import yt_dlp
 import requests
