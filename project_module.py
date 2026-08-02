@@ -226,7 +226,7 @@ def input_album_parametrs():
     params = {"AddNumberAtStartOfTheName":False,
     "PlaylistnameIsAlbum":True,
     "MakeAlbumNameUniqueByAddingIdAtTheEnd":True,
-    "MakeAlbumUniqueByAddingPlatformNameAtTheEnd":True,
+    "MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd":True,
     "AddIndexAttheStartOfSongsNames":False,
     "AddIndexAttheStartOfFilesNames":False,
     "SaveToFolder":False,
@@ -245,8 +245,9 @@ def input_album_parametrs():
     print("[3] - {Имя Альбома/Плейлиста} {Имя Платформы} {Айди Плейлимста/Альбома} ")
     print("[4] - {Имя Альбома/Плейлиста} {Имя Платформы}")
     inp = inputnumber(4)
+    print(inp,inp%2 == 1,inp>2)
     params["MakeAlbumNameUniqueByAddingIdAtTheEnd"] = inp%2 == 1
-    params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"] = inp>2
+    params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"] = inp>=3
     print("Добавлять нумерацию в начале имени (да если её нет)?")
     print("[1] - Да\n[2] - Нет")
     params["AddIndexAttheStartOfSongsNames"] = inputnumber(2) == 1
@@ -793,7 +794,7 @@ def download_soundcloud_playlist(url, params):
         return None
 
     safe_name = url_to_filename.soundcloud_playlist(url)
-    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingIdAtTheEnd"],params["MakeAlbumUniqueByAddingPlatformNameAtTheEnd"])
+    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"],params["MakeAlbumNameUniqueByAddingIdAtTheEnd"])
     if params["SaveToFolder"]:
         target_dir = os.path.join(dirs_paths.SoundCloud_Music, safe_name)
         os.makedirs(target_dir, exist_ok=True)
@@ -995,7 +996,7 @@ def download_youtube_music_playlist(url, params):
         
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
 
-    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingIdAtTheEnd"],params["MakeAlbumUniqueByAddingPlatformNameAtTheEnd"])
+    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"],params["MakeAlbumNameUniqueByAddingIdAtTheEnd"])
     safe_name = url_to_filename.youtube_playlist(url)
     
     if params["SaveToFolder"]:
