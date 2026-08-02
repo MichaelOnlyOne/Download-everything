@@ -14,9 +14,8 @@ def main():
     else:
         params = project_module.input_album_parametrs()
     for url in urls:
-        print(url)
         try:
-            if Params[3]:
+            if m3u:
                 project_module.create_soundcloud_m3u_playlist(url,music_dir)
             else:
                project_module.download_soundcloud_playlist(url,params)
