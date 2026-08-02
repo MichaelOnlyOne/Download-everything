@@ -5,15 +5,6 @@ import time
 from io import BytesIO
 from urllib.parse import urlparse, parse_qs
 
-def check_and_download_modules(modules = ["requests",'yt-dlp', 'mutagen', 'PIL', 'regex']):
-    for module in modules:
-        try:
-            __import__(module.replace('-', '_'))
-        except ImportError:
-            pip_name = 'pillow' if module == 'PIL' else module
-            print(f"Sorry didn't you download {pip_name}, but downloading strarts")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name, "--quiet"])
-
 from PIL import Image, ImageChops
 import yt_dlp
 import requests
@@ -53,6 +44,7 @@ class files_paths():
     Music_Path_Conf = os.path.join(dirs_paths.confs, "Music Save Path.txt")
     Cover_Path_Conf = os.path.join(dirs_paths.confs, "Cover Save Path.txt")
     Playlist_Path_Conf = os.path.join(dirs_paths.confs, "Playlist Save Path.txt")
+    ffmpeg_Path_Conf = os.path.join(dirs_paths.confs, "ffmpeg Path.txt")
     SoundCloud_Playlists_links = os.path.join(dirs_paths.inputs, "SoundCloud Playlists links.txt")
     Youtube_Music_Playlists_links = os.path.join(dirs_paths.inputs, "Youtube Music Playlists links.txt")
     Youtube_Music_links = os.path.join(dirs_paths.inputs, "Youtube Music links.txt")
@@ -66,6 +58,7 @@ write_if_empty(files_paths.Video_Path_Conf, "Videos")
 write_if_empty(files_paths.Music_Path_Conf, "Music")
 write_if_empty(files_paths.Cover_Path_Conf, "Covers")
 write_if_empty(files_paths.Playlist_Path_Conf, "Playlists")
+write_if_empty(files_paths.ffmpeg_Path_Conf, '.bin')
 
 with open(files_paths.Video_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Videos = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
@@ -78,6 +71,9 @@ with open(files_paths.Cover_Path_Conf, 'r', encoding='utf-8') as f:
 
 with open(files_paths.Playlist_Path_Conf, 'r', encoding='utf-8') as f:
     dirs_paths.Playlists = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
+
+with open(files_paths.ffmpeg_Path_Conf, 'r', encoding='utf-8') as f:
+    dirs_paths.bin = _get_abs_or_rel(f.read().strip(), dirs_paths.__base_dir__)
 
 dirs_paths.Youtube_Covers = os.path.join(dirs_paths.Covers, "Youtube")
 dirs_paths.YoutubeMusic_Covers = os.path.join(dirs_paths.Covers, "YoutubeMusic")
@@ -226,7 +222,43 @@ def makesafename(safe_name):
         
     return safe_name
 
-
+def input_album_parametrs():
+    params = {"AddNumberAtStartOfTheName":False,
+    "PlaylistnameIsAlbum":True,
+    "MakeAlbumNameUniqueByAddingIdAtTheEnd":True,
+    "MakeAlbumUniqueByAddingPlatformNameAtTheEnd":True,
+    "AddIndexAttheStartOfSongsNames":False,
+    "AddIndexAttheStartOfFilesNames":False,
+    "SaveToFolder":False,
+    }
+    #Это можно назвать мини опросом...
+    print("Использовать название плейлиста как альбом")
+    print("(если плеер не имеет функции плейлистов")
+    print("или плейлист это реально альбом)")
+    print("[1] - Да\n[2] - Нет")
+    params["PlaylistnameIsAlbum"] = inputnumber(2) == 1
+    if not params["PlaylistnameIsAlbum"]:
+        return params
+    print("Выбери")
+    print("[1] - {Имя Альбома/Плейлиста} {Айди Плейлимста/Альбома}")
+    print("[2] - {Имя Альбома/Плейлиста}")
+    print("[3] - {Имя Альбома/Плейлиста} {Имя Платформы} {Айди Плейлимста/Альбома} ")
+    print("[4] - {Имя Альбома/Плейлиста} {Имя Платформы}")
+    inp = inputnumber(4)
+    params["MakeAlbumNameUniqueByAddingIdAtTheEnd"] = inp%2 == 1
+    params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"] = inp>2
+    print("Добавлять нумерацию в начале имени (да если её нет)?")
+    print("[1] - Да\n[2] - Нет")
+    params["AddIndexAttheStartOfSongsNames"] = inputnumber(2) == 1
+    print("Создавать отдельную папку под плейлист/альбом?")
+    print("[1] - Да\n[2] - Нет")
+    params["SaveToFolder"] = inputnumber(2) == 1
+    if params["SaveToFolder"]:
+        print("Добавлять нумерацию в начале названий файлов?")#почти бесполезная функция
+        print("[1] - Да\n[2] - Нет")
+        params["AddIndexAttheStartOfFilesNames"] = inputnumber(2) == 1
+    del inp
+    return params
 class url_to_filename:
     @staticmethod
     def youtube_video(url):
@@ -274,7 +306,7 @@ class url_to_filename:
                 info = ydl.extract_info(url, download=False)
             playlist_title = info.get('title', 'Untitled Playlist')
             playlist_id = info.get('id', 'unknown_id')
-            return makesafename(f"{playlist_title} [{playlist_id}]")
+            return makesafename(f"{playlist_title} {playlist_id}")
         except Exception:
             return "youtube_playlist"
 
@@ -331,7 +363,7 @@ class url_to_filename:
         except Exception:
             return "soundcloud_playlist"
     @staticmethod
-    def soundcloud_playlist_for_info(url):
+    def soundcloud_playlist_for_info(url,PlatformMark=False,IdMark=True):
         try:
             with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -344,18 +376,28 @@ class url_to_filename:
                     playlist_id = match.group(0)
                 else:
                     playlist_id = playlist_id.replace(':', '-')
-            return f"{makesafename(playlist_title)} {playlist_id} "
+            out = playlist_title
+            if PlatformMark:
+                out = f"{out} SoundCloud"
+            if IdMark:
+                out = f"{out} {playlist_id}"
+            return out
         except Exception:
             return "soundcloud_playlist"
 
     @staticmethod
-    def youtube_playlist_for_info(url):
+    def youtube_playlist_for_info(url,PlatformMark=False,IdMark=True):
         try:
             with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
                 info = ydl.extract_info(url, download=False)
             playlist_title = info.get('title', 'Untitled Playlist')
             playlist_id = info.get('id', 'unknown_id')
-            return f"{makesafename(playlist_title)} {playlist_id} "
+            out = playlist_title
+            if PlatformMark:
+                out = f"{out} Youtube Music"
+            if IdMark:
+                out = f"{out} {playlist_id}"
+            return out
         except Exception:
             return "youtube_playlist"
 def download_soundcloud_cover(url):
@@ -742,7 +784,7 @@ def download_youtube_track_with_info(url):
 
     return mp3_file
 
-def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, add_index_to_filename=True):
+def download_soundcloud_playlist(url, params):
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
         playlist_info = ydl.extract_info(url, download=False)
         
@@ -751,8 +793,8 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
         return None
 
     safe_name = url_to_filename.soundcloud_playlist(url)
-    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url)
-    if save_to_folder:
+    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingIdAtTheEnd"],params["MakeAlbumUniqueByAddingPlatformNameAtTheEnd"])
+    if params["SaveToFolder"]:
         target_dir = os.path.join(dirs_paths.SoundCloud_Music, safe_name)
         os.makedirs(target_dir, exist_ok=True)
     else:
@@ -794,20 +836,20 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
                 import shutil
                 current_name = os.path.basename(mp3_file)
                 
-                if add_index_to_filename:
+                if params["AddIndexAttheStartOfFilesNames"]:
                     new_name = f"{str_index} {current_name}"
                 else:
                     new_name = current_name
                     
                 target_file_path = os.path.join(target_dir, new_name)
                 
-                if save_to_folder or add_index_to_filename:
+                if params["SaveToFolder"] or params["AddIndexAttheStartOfFilesNames"]:
                     if os.path.exists(target_file_path):
                         os.remove(target_file_path)
                     shutil.copy(mp3_file, target_file_path)
                     mp3_file = target_file_path
 
-                if use_album_meta:
+                if params["PlaylistnameIsAlbum"]:
                     try:
                         try:
                             audio = mutagen.id3.ID3(mp3_file)
@@ -816,8 +858,11 @@ def download_soundcloud_playlist(url, save_to_folder=True, use_album_meta=True, 
 
                         orig_artist = str(audio.get('TPE1', entry.get('uploader', 'Unknown Author')))
                         orig_title = str(audio.get('TIT2', entry.get('title', 'Track')))
-                        audio.add(mutagen.id3.TPE1(encoding=3, text=orig_artist))  
-                        audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {orig_title}"))
+                        audio.add(mutagen.id3.TPE1(encoding=3, text=orig_artist))
+                        if params["AddIndexAttheStartOfSongsNames"]:
+                            audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {orig_title}"))
+                        else:
+                            audio.add(mutagen.id3.TIT2(encoding=3, text=orig_title))
                         audio.add(mutagen.id3.TALB(encoding=3, text=playlist_unique_title))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
                         
@@ -940,7 +985,7 @@ def create_youtube_m3u_playlist(url, music_dir=""):
         return m3u_file_path
     except Exception:
         return None
-def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=True, add_index_to_filename=True):
+def download_youtube_music_playlist(url, params):
     with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
         playlist_info = ydl.extract_info(url, download=False)
         
@@ -950,10 +995,10 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
         
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
 
-    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url)
+    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingIdAtTheEnd"],params["MakeAlbumUniqueByAddingPlatformNameAtTheEnd"])
     safe_name = url_to_filename.youtube_playlist(url)
     
-    if save_to_folder:
+    if params["SaveToFolder"]:
         target_dir = os.path.join(dirs_paths.Youtube_Music, safe_name)
         os.makedirs(target_dir, exist_ok=True)
     else:
@@ -994,15 +1039,19 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
                 else:
                     img_file = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")
 
-                if use_album_meta:
+                if params["PlaylistnameIsAlbum"]:
                     try:
                         audio = mutagen.id3.ID3(mp3_file)
                         audio.delete()
                         audio = mutagen.id3.ID3()
-                        
-                        audio.add(mutagen.id3.TPE1(encoding=3, text=entry.get('uploader', 'Unknown Author')))  
-                        audio.add(mutagen.id3.TIT2(encoding=3, text=playlist_unique_title))
-                        audio.add(mutagen.id3.TALB(encoding=3, text=f"{playlist_title} {playlist_id}"))
+                        orig_artist = str(audio.get('TPE1', entry.get('uploader', 'Unknown Author')))
+                        orig_title = str(audio.get('TIT2', entry.get('title', 'Track')))
+                        audio.add(mutagen.id3.TPE1(encoding=3, text=orig_artist))
+                        if params["AddIndexAttheStartOfSongsNames"]:
+                            audio.add(mutagen.id3.TIT2(encoding=3, text=f"{str_index} {orig_title}"))
+                        else:
+                            audio.add(mutagen.id3.TIT2(encoding=3, text=orig_title))
+                        audio.add(mutagen.id3.TALB(encoding=3, text=playlist_unique_title))
                         audio.add(mutagen.id3.TRCK(encoding=3, text=str_index))
                         
                         if img_file and os.path.exists(img_file):
@@ -1017,14 +1066,14 @@ def download_youtube_music_playlist(url, save_to_folder=True, use_album_meta=Tru
                 import shutil
                 current_name = os.path.basename(mp3_file)
                 
-                if add_index_to_filename:
+                if params["AddIndexAttheStartOfFilesNames"]:
                     new_name = f"{str_index} {current_name}"
                 else:
                     new_name = current_name
                     
                 target_file_path = os.path.join(target_dir, new_name)
                 
-                if save_to_folder or add_index_to_filename:
+                if params["SaveToFolder"] or params["AddIndexAttheStartOfFilesNames"]:
                     if os.path.exists(target_file_path):
                         os.remove(target_file_path)
                     shutil.copy(mp3_file, target_file_path)
