@@ -9,6 +9,7 @@ config_list = [
     ("Music Path", files.Music_Path_Conf),
     ("Cover Path", files.Cover_Path_Conf),
     ("Playlist Path", files.Playlist_Path_Conf)
+    ("FFmpeg Path", files.ffmpeg_Path_Conf)
 ]
 
 while True:
