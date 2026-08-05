@@ -227,8 +227,8 @@ def input_album_parametrs():
     "PlaylistnameIsAlbum":True,
     "MakeAlbumNameUniqueByAddingIdAtTheEnd":True,
     "MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd":True,
-    "AddIndexAttheStartOfSongsNames":False,
-    "AddIndexAttheStartOfFilesNames":False,
+    "AddAuthorNameAtTheStart":False,
+    "AddPlatformNameAndIdToAlbumName":False,
     "SaveToFolder":False,
     }
     #Это можно назвать мини опросом...
@@ -239,15 +239,12 @@ def input_album_parametrs():
     params["PlaylistnameIsAlbum"] = inputnumber(2) == 1
     if not params["PlaylistnameIsAlbum"]:
         return params
-    print("Выбери")
-    print("[1] - {Имя Альбома/Плейлиста} {Айди Плейлимста/Альбома}")
-    print("[2] - {Имя Альбома/Плейлиста}")
-    print("[3] - {Имя Альбома/Плейлиста} {Имя Платформы} {Айди Плейлимста/Альбома} ")
-    print("[4] - {Имя Альбома/Плейлиста} {Имя Платформы}")
-    inp = inputnumber(4)
-    print(inp,inp%2 == 1,inp>2)
-    params["MakeAlbumNameUniqueByAddingIdAtTheEnd"] = inp%2 == 1
-    params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"] = inp>=3
+    print("Добавить в название альбома название платформы и айди плейлиста?")
+    print("[1] - Да\n[2] - Нет")
+    params["AddPlatformNameAndIdToAlbumName"] = inputnumber(2) == 1
+    print("Добавить в название альбома никнейм автора?")
+    print("[1] - Да\n[2] - Нет")
+    params["AddAuthorNameAtTheStart"] = inputnumber(2) == 1
     print("Добавлять нумерацию в начале имени (да если её нет)?")
     print("[1] - Да\n[2] - Нет")
     params["AddIndexAttheStartOfSongsNames"] = inputnumber(2) == 1
@@ -258,7 +255,6 @@ def input_album_parametrs():
         print("Добавлять нумерацию в начале названий файлов?")#почти бесполезная функция
         print("[1] - Да\n[2] - Нет")
         params["AddIndexAttheStartOfFilesNames"] = inputnumber(2) == 1
-    del inp
     return params
 class url_to_filename:
     @staticmethod
@@ -364,13 +360,13 @@ class url_to_filename:
         except Exception:
             return "soundcloud_playlist"
     @staticmethod
-    def soundcloud_playlist_for_info(url,PlatformMark=False,IdMark=True):
+    def soundcloud_playlist_for_info(url,AuthorMark=False,PlatformMark=False):
         try:
             with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
                 info = ydl.extract_info(url, download=False)
-                
             playlist_title = info.get('title', 'Untitled Playlist')
             playlist_id = str(info.get('id', 'unknown_id'))
+            author_name = info.get('uploader', 'Unknown Author')
             if ":" in playlist_id:
                 match = re.search(r'\b\d{5,}\b', playlist_id)
                 if match:
@@ -378,26 +374,27 @@ class url_to_filename:
                 else:
                     playlist_id = playlist_id.replace(':', '-')
             out = playlist_title
+            if AuthorMark:
+                out = f"{author_name} - {out}"
             if PlatformMark:
-                out = f"{out} SoundCloud"
-            if IdMark:
-                out = f"{out} {playlist_id}"
+                out = f"{out} (SoundCloud: {playlist_id})"
             return out
         except Exception:
             return "soundcloud_playlist"
 
     @staticmethod
-    def youtube_playlist_for_info(url,PlatformMark=False,IdMark=True):
+    def youtube_playlist_for_info(url,AuthorMark=False,PlatformMark=False):
         try:
             with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
                 info = ydl.extract_info(url, download=False)
             playlist_title = info.get('title', 'Untitled Playlist')
             playlist_id = info.get('id', 'unknown_id')
+            author_name = info.get('uploader', 'Unknown Author')
             out = playlist_title
+            if AuthorMark:
+                out = f"{author_name} - {out}"
             if PlatformMark:
-                out = f"{out} Youtube Music"
-            if IdMark:
-                out = f"{out} {playlist_id}"
+                out = f"{out} (Youtube Music: {playlist_id})"
             return out
         except Exception:
             return "youtube_playlist"
@@ -793,7 +790,7 @@ def download_soundcloud_playlist(url, params):
         return None
 
     safe_name = url_to_filename.soundcloud_playlist(url)
-    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"],params["MakeAlbumNameUniqueByAddingIdAtTheEnd"])
+    playlist_unique_title = url_to_filename.soundcloud_playlist_for_info(url,params["AddAuthorNameAtTheStart"],params["AddPlatformNameAndIdToAlbumName"])
     if params["SaveToFolder"]:
         target_dir = os.path.join(dirs_paths.SoundCloud_Music, safe_name)
         os.makedirs(target_dir, exist_ok=True)
@@ -995,7 +992,7 @@ def download_youtube_music_playlist(url, params):
         
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
 
-    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url,params["MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd"],params["MakeAlbumNameUniqueByAddingIdAtTheEnd"])
+    playlist_unique_title = url_to_filename.youtube_playlist_for_info(url,params["AddAuthorNameAtTheStart"],params["AddPlatformNameAndIdToAlbumName"])
     safe_name = url_to_filename.youtube_playlist(url)
     
     if params["SaveToFolder"]:
