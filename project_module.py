@@ -673,7 +673,6 @@ def download_soundcloud_mp3(url):
     return None
 def download_youtube_mp3(url):
     filename = url_to_filename.youtube_track(url)
-    filename = makesafename(filename)
 
     final_mp3_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
 
