@@ -1025,9 +1025,9 @@ def download_youtube_music_playlist(url, params):
             mp3_file = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
 
             if os.path.exists(mp3_file):
-                time.sleep(2)
+                time.sleep(5)
             else:
-                time.sleep(1)
+                time.sleep(2.5)
                 download_youtube_mp3(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
