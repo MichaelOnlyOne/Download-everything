@@ -225,8 +225,8 @@ def makesafename(safe_name):
 def input_album_parametrs():
     params = {"AddNumberAtStartOfTheName":False,
     "PlaylistnameIsAlbum":True,
-    "MakeAlbumNameUniqueByAddingIdAtTheEnd":True,
     "MakeAlbumNameUniqueByAddingPlatformNameAtTheEnd":True,
+    "AddIndexAttheStartOfFilesNames":False,
     "AddAuthorNameAtTheStart":False,
     "AddPlatformNameAndIdToAlbumName":False,
     "SaveToFolder":False,
@@ -1028,7 +1028,7 @@ def download_youtube_music_playlist(url, params):
                 time.sleep(5)
             else:
                 time.sleep(2.5)
-                download_youtube_mp3(track_url)
+                download_youtube_track_with_info(track_url)
 
             if mp3_file and os.path.exists(mp3_file):
                 if not os.path.exists(os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")):
