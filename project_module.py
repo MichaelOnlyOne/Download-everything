@@ -11,6 +11,7 @@ import requests
 import re
 import regex
 import mutagen
+import numpy as np
 
 
 
@@ -429,7 +430,7 @@ def download_youtube_cover(url):
     filename = makesafename(filename)
 
     full_path = os.path.join(dirs_paths.Youtube_Covers, f"{filename}_cover.jpg")
-
+    print(full_path)
     if os.path.exists(full_path):
         print(f"[YouTube Cover] Файл обложки уже на диске: {full_path}")
         return full_path
@@ -439,13 +440,39 @@ def download_youtube_cover(url):
         info = ydl.extract_info(url, download=False)
     
     img_url = info.get('thumbnail')
-    print(f"[YouTube Cover] Получена ссылка на превью: {img_url}")
-    
+    video_id = info.get('id') or info.get('video_id')
     if img_url:
         os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
         try:
             print(f"[YouTube Cover] Скачивание картинки через requests...")
             response = requests.get(img_url, timeout=5)
+            qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
+            img = None
+            for quality in qualities:
+                img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
+                print(f"[YouTube Cover] Скачивание картинки через requests ({quality})...")
+                print(f"[YouTube Cover] Получена ссылка на превью: {img_url}")
+                try:
+                    response = requests.get(img_url, timeout=5)
+                    while response.status_code == 403:
+                        print("Ошибка 403 через 30 секунд ещё одна попытка")
+                        time.sleep(30)
+                        response = requests.get(img_url, timeout=5)
+                    print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
+                    if response.status_code == 200:
+                        temp_img = Image.open(BytesIO(response.content))
+                        if temp_img.size == (120, 90):
+                            print(f"[YouTube Cover] Качество {quality} выдало заглушку. Пробуем ниже...")
+                            continue
+                        img = temp_img.convert('RGB')
+                        print(f"[YouTube Cover] Найдено реальное качество ({quality}) с разрешением: {img.size}")
+                        break
+                    else:
+                        print(f"[YouTube Cover] Статус {response.status_code} для {quality}, пробуем хуже...")
+                        continue
+                except requests.RequestException:
+                    print(f"[YouTube Cover] Ошибка сети при запросе {quality}, пробуем хуже...")
+                    continue
             print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
             img = Image.open(BytesIO(response.content))
             img = img.convert('RGB')
@@ -454,7 +481,6 @@ def download_youtube_cover(url):
             print(f"[YouTube Cover] Исходная обложка сохранена: {full_path}")
             
             with Image.open(full_path) as saved_img:
-                import numpy as np
                 w, h = saved_img.width, saved_img.height
                 current_ratio = w / h
                 
@@ -506,8 +532,6 @@ def download_youtube_cover(url):
     else:
         print("[YouTube Cover] Предупреждение: В метаданных 'info' отсутствует поле 'thumbnail'!")
     return None
-
-
 def download_youtubemusic_cover(url):
     filename = url_to_filename.youtube_track(url)
     filename = makesafename(filename)
@@ -589,7 +613,6 @@ def download_youtubemusic_cover(url):
             print(f"[YT Music Cover] Ошибка в процессе обработки квадрата: {e}")
     else:
         print(f"[YT Music Cover] Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
-            
     return None
 
 
@@ -670,7 +693,6 @@ def download_soundcloud_mp3(url):
     return None
 def download_youtube_mp3(url):
     filename = url_to_filename.youtube_track(url)
-
     final_mp3_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
 
     if os.path.exists(final_mp3_path):
@@ -699,8 +721,16 @@ def download_soundcloud_track_with_info(url):
         return mp3_file
 
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-        info = ydl.extract_info(url, download=False)
-
+        attempt = 0
+        while True:
+            try:
+                info = ydl.extract_info(url, download=False)
+                break
+            except yt_dlp.utils.DownloadError as e:
+                attempt += 1
+                print(f"Попытка {attempt} провалилась: {e}")
+                time.sleep(10)
+        del attempt
     download_soundcloud_mp3(url)
 
     if not os.path.exists(mp3_file):
@@ -708,20 +738,20 @@ def download_soundcloud_track_with_info(url):
         return None
 
     img_file = download_soundcloud_cover(url)
-    
+    while img_file == None:
+        print("Ошибка скачивания None,\nповторная попытка через 30 секунд.")
+        time.sleep(30)
+        img_file = download_soundcloud_cover(url)
     print("Заполнение метаданных SoundCloud...")
     try:
-        try:
-            audio = mutagen.id3.ID3(mp3_file)
-            audio.delete() 
-        except Exception:
-            pass
-        
+        print("Удаление данных...")
+        audio = mutagen.id3.ID3(mp3_file)
+        audio.delete()
+        print("Заполнение данных...")
         audio = mutagen.id3.ID3()
         audio.add(mutagen.id3.TPE1(encoding=3, text=info.get('uploader', 'Unknown Author')))  
         audio.add(mutagen.id3.TIT2(encoding=3, text=info.get('title', 'Track')))   
         audio.add(mutagen.id3.TALB(encoding=3, text="SoundCloud"))    
-        
         if img_file and os.path.exists(img_file):
             with open(img_file, 'rb') as f:
                 audio.add(mutagen.id3.APIC(
@@ -745,25 +775,35 @@ def download_youtube_track_with_info(url):
     track_opts = ydl_opts.youtube_info.copy()
     track_opts['noplaylist'] = True
     
-    with yt_dlp.YoutubeDL(track_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        
-    mp3_file = download_youtube_mp3(url)
-    
+    mp3_file = None
+    try:
+        mp3_file = download_youtube_mp3(url)
+    except:
+        pass
     if mp3_file is None or not os.path.exists(mp3_file):
         print("Ошибка: MP3 файл YouTube не был создан.")
         return None
-
-    img_file = download_youtubemusic_cover(url)
-    
-    print("Заполнение метаданных YouTube...")
+    with yt_dlp.YoutubeDL(track_opts) as ydl:
+        attempt = 0
+        while True:
+            try:
+                info = ydl.extract_info(url, download=False)
+                break
+            except yt_dlp.utils.DownloadError as e:
+                attempt += 1
+                print(f"Попытка {attempt} провалилась: {e}")
+                time.sleep(10)
+        del attempt
+    img_file = download_youtubemusic_cover(url)   
+    while img_file == None:
+        print("Ошибка скачивания None,\nповторная попытка через 30 секунд.")
+        time.sleep(30)
+        img_file = download_youtubemusic_cover(url)    
     try:
-        try:
-            audio = mutagen.id3.ID3(mp3_file)
-            audio.delete() 
-        except Exception:
-            pass
-        
+        print("Удаление данных...")
+        audio = mutagen.id3.ID3(mp3_file)
+        audio.delete()
+        print("Заполнение данных...")
         audio = mutagen.id3.ID3()
         audio.add(mutagen.id3.TPE1(encoding=3, text=info.get('uploader', 'Unknown Author')))  
         audio.add(mutagen.id3.TIT2(encoding=3, text=info.get('title', 'Untitled Video')))   
@@ -778,7 +818,6 @@ def download_youtube_track_with_info(url):
         print("Обложка и теги успешно вшиты в MP3!")
     except Exception as e:
         print(f"Не удалось записать теги: {e}")
-
     return mp3_file
 
 def download_soundcloud_playlist(url, params):
@@ -819,10 +858,14 @@ def download_soundcloud_playlist(url, params):
             mp3_file = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
 
             if os.path.exists(mp3_file):
-                time.sleep(3)
-            else:
                 time.sleep(10)
-                download_soundcloud_track_with_info(track_url)
+            else:
+                Exists = download_soundcloud_track_with_info(track_url)
+                while Exists == None:
+                    print("Повторная попытка через 30 секунд")
+                    time.sleep(30)
+                    Exists = download_soundcloud_track_with_info(track_url)
+                time.sleep(10)
 
             if mp3_file and os.path.exists(mp3_file):
                 if not os.path.exists(os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")):
@@ -1025,10 +1068,15 @@ def download_youtube_music_playlist(url, params):
             mp3_file = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
 
             if os.path.exists(mp3_file):
-                time.sleep(5)
+                time.sleep(10)
             else:
-                time.sleep(2.5)
-                download_youtube_track_with_info(track_url)
+                Exists = download_youtube_track_with_info(track_url)
+                print(Exists)
+                while Exists == None:
+                    print("Повторная попытка через 30 секунд")
+                    time.sleep(30)
+                    Exists = download_youtube_track_with_info(track_url)
+                time.sleep(10)
 
             if mp3_file and os.path.exists(mp3_file):
                 if not os.path.exists(os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")):
