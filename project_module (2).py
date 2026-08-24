@@ -429,7 +429,7 @@ def download_youtube_cover(url):
     log(log_tag, f"Запрос метаданных через yt-dlp для: {url}...")
     with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
         info = ydl.extract_info(url, download=False)
-    video_id = info.get('id') or info.get('video_id')
+    video_id = info.get('id')
     if img_url:
         os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
         try:
@@ -599,6 +599,3 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
     else:
         log(log_tag, f"Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
     return None
-with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
-    info = ydl.extract_info("https://www.youtube.com/watch?v=rK3535sSNhw", download=False)
-log("Youtube", f"{info.get('id')} {info.get('video_id')}")
