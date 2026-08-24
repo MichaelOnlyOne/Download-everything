@@ -601,4 +601,4 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
     return None
 with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
     info = ydl.extract_info("https://www.youtube.com/watch?v=rK3535sSNhw", download=False)
-log("Youtube", info.get('id') , info.get('video_id'))
+log("Youtube", f"{info.get('id')} {info.get('video_id')}")
