@@ -1,21 +1,15 @@
-import subprocess
 import os
-import sys
 import time
 from io import BytesIO
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
-from PIL import Image, ImageChops
+from PIL import Image
 import yt_dlp
 import requests
 import re
 import regex
 import mutagen
 import numpy as np
-
-
-
-import os
 
 def write_if_empty(file_path, text):
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
