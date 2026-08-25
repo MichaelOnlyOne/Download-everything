@@ -11,7 +11,7 @@ import mutagen
 import numpy
 
 #Доп функции
-def log(tag,text,spacecount = 10):
+def log(tag,text,spacecount = 16):
     if len(tag) > spacecount:
         tag = tag[:spacecount]
     elif (spacecount - len(tag))%2 == 1:
@@ -585,3 +585,4 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
         log(log_tag, f"Ошибка: Обложка не была скачана")
     return None
 download_youtubemusic_cover("https://www.youtube.com/watch?v=zdJNqba6WA4")
+download_soundcloud_cover("https://soundcloud.com/nekofard-archive/flower-man")
