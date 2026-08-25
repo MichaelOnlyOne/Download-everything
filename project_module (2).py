@@ -204,7 +204,6 @@ class ydl_opts():
         'format': 'http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -214,7 +213,6 @@ class ydl_opts():
         'format': 'http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -224,7 +222,6 @@ class ydl_opts():
         'format': 'bestaudio/ba/worstaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -600,7 +597,7 @@ def download_soundcloud_mp3(url):
     filename = url_to_name.soundcloud_track(url)
     path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.{ext}")
     if os.path.exists(path):
-        log(log_tag,f"mp3 файл уже существует, пропускаем: {path}")
+        log(log_tag,f"файл уже существует, пропускаем: {path}")
         return path
     os.makedirs(dirs_paths.SoundCloud_Music, exist_ok=True)
     save_path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.%(ext)s")
