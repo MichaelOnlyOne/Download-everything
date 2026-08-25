@@ -9,7 +9,8 @@ import re
 import regex
 import mutagen
 import numpy
-
+#Базовые перемменые которые можно редактировать
+ErrorSleep = 30 #Задержка перед повторной попыткой при ошибке
 #Доп функции
 def log(tag,text,spacecount = 16):
     if len(tag) > spacecount:
@@ -204,6 +205,7 @@ class ydl_opts():
         'format': 'http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -213,6 +215,7 @@ class ydl_opts():
         'format': 'http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -222,6 +225,7 @@ class ydl_opts():
         'format': 'bestaudio/ba/worstaudio',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
     }
@@ -253,147 +257,178 @@ class ydl_opts():
     }
 #Сылки в имена
 class url_to_name:
+    log_tag = "url to name"
     @staticmethod
     def youtube_video(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            video_title = info.get('title', 'Untitled Video')
-            v_id = info.get('id', 'unknown_id')
-            return f"{makesafename(video_title)} [{v_id}]"
-        except Exception:
-            return "youtube_video"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                video_title = info.get('title', 'Untitled Video')
+                v_id = info.get('id', 'unknown_id')
+                return f"{makesafename(video_title)} [{v_id}]"
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
+
     @staticmethod
     def youtube_track(url):
-        try:
-            track_opts = ydl_opts.youtube_info.copy()
-            track_opts['noplaylist'] = True
-            
-            with yt_dlp.YoutubeDL(track_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-            
-            v_id = info.get('webpage_url_id') or info.get('display_id') or info.get('id')
-            
-            if not v_id or len(v_id) > 20:
-                v_id = 'unknown_id'
+        while True:
+            try:
+                track_opts = ydl_opts.youtube_info.copy()
+                track_opts['noplaylist'] = True
+                
+                with yt_dlp.YoutubeDL(track_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                
+                v_id = info.get('webpage_url_id') or info.get('display_id') or info.get('id')
+                
+                if not v_id or len(v_id) > 20:
+                    v_id = 'unknown_id'
 
-            raw_username = (
-                info.get('uploader_id') or 
-                info.get('channel_id') or 
-                'unknown_author'
-            )
-            if not raw_username or str(raw_username).strip().lower() == 'none':
-                username = f"channel_{v_id}"
-            else:
-                username = str(raw_username)
-                if username.startswith('@'):
-                    username = username[1:]       
-            result = makesafename(f"{username} {v_id}")
-            return result
-        except Exception:
-            return "youtube_track"
-    @staticmethod
-    def youtube_playlist(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            playlist_title = info.get('title', 'Untitled Playlist')
-            playlist_id = info.get('id', 'unknown_id')
-            return makesafename(f"{playlist_title} {playlist_id}")
-        except Exception:
-            return "youtube_playlist"
+                raw_username = (
+                    info.get('uploader_id') or 
+                    info.get('channel_id') or 
+                    'unknown_author'
+                )
+                if not raw_username or str(raw_username).strip().lower() == 'none':
+                    username = f"channel_{v_id}"
+                else:
+                    username = str(raw_username)
+                    if username.startswith('@'):
+                        username = username[1:]       
+                result = makesafename(f"{username} {v_id}")
+                return result
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 
     @staticmethod
     def rutube_video(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.rutube_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            video_id = info.get('id', 'unknown_id')
-            video_title = info.get('title', 'Untitled Video')
-            return f"{makesafename(video_title)} [{video_id}]"
-        except Exception:
-            return "rutube_video"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.rutube_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                video_id = info.get('id', 'unknown_id')
+                video_title = info.get('title', 'Untitled Video')
+                return f"{makesafename(video_title)} [{video_id}]"
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 
     @staticmethod
     def vk_video(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.vk_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            video_id = info.get('id', 'unknown_id')
-            video_title = info.get('title', 'Untitled Video')
-            return f"{makesafename(video_title)} [{video_id}]"
-        except Exception:
-            return "vk_video"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.vk_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                video_id = info.get('id', 'unknown_id')
+                video_title = info.get('title', 'Untitled Video')
+                return f"{makesafename(video_title)} [{video_id}]"
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 
     @staticmethod
     def soundcloud_track(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            normal_url = info.get('webpage_url', url)
-            path_parts = [p for p in urlparse(normal_url).path.split('/') if p]
-            artist_slug = path_parts[-2] if len(path_parts) >= 2 else "artist"
-            track_slug = path_parts[-1].split('?')[0] if path_parts else "track"
-            return makesafename(f"{artist_slug} {track_slug}")
-        except Exception:
-            return "soundcloud_track"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                normal_url = info.get('webpage_url', url)
+                path_parts = [p for p in urlparse(normal_url).path.split('/') if p]
+                artist_slug = path_parts[-2] if len(path_parts) >= 2 else "artist"
+                track_slug = path_parts[-1].split('?')[0] if path_parts else "track"
+                return makesafename(f"{artist_slug} {track_slug}")
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 
     @staticmethod
     def soundcloud_playlist(url):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-                
-            playlist_title = info.get('title', 'Untitled Playlist')
-            playlist_id = str(info.get('id', 'unknown_id'))
-            if ":" in playlist_id:
-                match = re.search(r'\b\d{5,}\b', playlist_id)
-                if match:
-                    playlist_id = match.group(0)
-                else:
-                    playlist_id = playlist_id.replace(':', '-')
-            return f"{playlist_id} {makesafename(playlist_title)}"
-        except Exception:
-            return "soundcloud_playlist"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    
+                playlist_title = info.get('title', 'Untitled Playlist')
+                playlist_id = str(info.get('id', 'unknown_id'))
+                if ":" in playlist_id:
+                    match = re.search(r'\b\d{5,}\b', playlist_id)
+                    if match:
+                        playlist_id = match.group(0)
+                    else:
+                        playlist_id = playlist_id.replace(':', '-')
+                return f"{playlist_id} {makesafename(playlist_title)}"
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
+
+    @staticmethod
+    def youtube_playlist(url):
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                playlist_title = info.get('title', 'Untitled Playlist')
+                playlist_id = info.get('id', 'unknown_id')
+                return makesafename(f"{playlist_title} {playlist_id}")
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
+
     @staticmethod
     def soundcloud_playlist_for_info(url,AuthorMark=False,PlatformMark=False):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            playlist_title = info.get('title', 'Untitled Playlist')
-            playlist_id = str(info.get('id', 'unknown_id'))
-            author_name = info.get('uploader', 'Unknown Author')
-            if ":" in playlist_id:
-                match = re.search(r'\b\d{5,}\b', playlist_id)
-                if match:
-                    playlist_id = match.group(0)
-                else:
-                    playlist_id = playlist_id.replace(':', '-')
-            out = playlist_title
-            if AuthorMark:
-                out = f"{author_name} - {out}"
-            if PlatformMark:
-                out = f"{out} (SoundCloud: {playlist_id})"
-            return out
-        except Exception:
-            return "soundcloud_playlist"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                playlist_title = info.get('title', 'Untitled Playlist')
+                playlist_id = str(info.get('id', 'unknown_id'))
+                author_name = info.get('uploader', 'Unknown Author')
+                if ":" in playlist_id:
+                    match = re.search(r'\b\d{5,}\b', playlist_id)
+                    if match:
+                        playlist_id = match.group(0)
+                    else:
+                        playlist_id = playlist_id.replace(':', '-')
+                out = playlist_title
+                if AuthorMark:
+                    out = f"{author_name} - {out}"
+                if PlatformMark:
+                    out = f"{out} (SoundCloud: {playlist_id})"
+                return out
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 
     @staticmethod
     def youtube_playlist_for_info(url,AuthorMark=False,PlatformMark=False):
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            playlist_title = info.get('title', 'Untitled Playlist')
-            playlist_id = info.get('id', 'unknown_id')
-            author_name = info.get('uploader', 'Unknown Author')
-            out = playlist_title
-            if AuthorMark:
-                out = f"{author_name} - {out}"
-            if PlatformMark:
-                out = f"{out} (Youtube Music: {playlist_id})"
-            return out
-        except Exception:
-            return "youtube_playlist"
+        while True:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts.youtube_info) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                playlist_title = info.get('title', 'Untitled Playlist')
+                playlist_id = info.get('id', 'unknown_id')
+                author_name = info.get('uploader', 'Unknown Author')
+                out = playlist_title
+                if AuthorMark:
+                    out = f"{author_name} - {out}"
+                if PlatformMark:
+                    out = f"{out} (Youtube Music: {playlist_id})"
+                return out
+            except Exception as e:
+                log(url_to_name.log_tag,f"Ошибка: {e}.")
+                log(url_to_name.log_tag,f"Повторная попытка создать имя через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
 #Обложки
 def download_soundcloud_cover(url):
     log_tag = "SC Cover"
@@ -401,19 +436,32 @@ def download_soundcloud_cover(url):
     if os.path.exists(path):
         log(log_tag,f"Обложка уже существует: {path}")
         return path
-    with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-        info = ydl.extract_info(url, download=False)
-    img_url = info.get('thumbnail')
-    if img_url:
+    log(log_tag, "Получение информации.")
+    info = None
+    while info == None:
         try:
-            response = requests.get(img_url)
-            img = Image.open(BytesIO(response.content))
-            img = img.convert('RGB')
-            img.save(path, 'JPEG')
-            log(log_tag,f"Обложка сохранена: {path}")
-            return path
+            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                info = ydl.extract_info(url, download=False)
         except Exception as e:
-            log(log_tag,f"Не удалось обработать обложку: {e}")
+            log(log_tag,f"Ошибка получения информации: {e}.")
+            log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
+            time.sleep(ErrorSleep)
+    log(log_tag, "Получение ссылки на изображение")
+    img_url = info.get('thumbnail')
+    log(log_tag, f"Ссылка на изображение: {img_url}")
+    if img_url:
+        while True:
+            try:
+                response = requests.get(img_url)
+                img = Image.open(BytesIO(response.content))
+                img = img.convert('RGB')
+                img.save(path, 'JPEG')
+                log(log_tag,f"Обложка сохранена: {path}.")
+                return path
+            except Exception as e:
+                log(log_tag,f"Не удалось обработать обложку: {e}.")
+                log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
+                time.sleep(ErrorSleep)
     return None
 def download_youtube_cover(url):
     log_tag = "Yt Cover"
@@ -421,12 +469,18 @@ def download_youtube_cover(url):
     if os.path.exists(path):
         log(log_tag, f"Обложка уже существует: {path}")
         return path
-
-    log(log_tag, f"Получение id через yt-dlp для: {url}")
-    with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
-        info = ydl.extract_info(url, download=False)
+    log(log_tag, "Получение информации.")
+    info = None
+    while info == None:
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
+                info = ydl.extract_info(url, download=False)
+        except Exception as e:
+            log(log_tag,f"Ошибка получения информации: {e}.")
+            log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
+            time.sleep(ErrorSleep)
+    log(log_tag, "Получение id.")
     video_id = info.get('id')
-
     try:
         qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
         for quality in qualities:
@@ -435,8 +489,8 @@ def download_youtube_cover(url):
             try:
                 response = requests.get(img_url, timeout=5)
                 while response.status_code == 403:
-                    log(log_tag, f"Ошибка 403 через 30 секунд ещё одна попытка")
-                    time.sleep(30)
+                    log(log_tag, f"Ошибка 403 через {ErrorSleep} секунд ещё одна попытка")
+                    time.sleep(ErrorSleep)
                     response = requests.get(img_url, timeout=5)
                 log(log_tag, f"Сервер ответил со статусом: {response.status_code}")
                 if response.status_code == 200:
@@ -451,8 +505,9 @@ def download_youtube_cover(url):
                 else:
                     log(log_tag, f"Статус {response.status_code} для {quality}, пробуем хуже.")
                     continue
-            except requests.RequestException:
-                log(log_tag,"Какая-то ошибка, ухужшение качества.")
+            except Exception as e:
+                log(log_tag,f"Ошибка {e},")
+                log(log_tag,"ухужшение качества.")
                 continue
         log(log_tag, f"Исходная обложка сохранена: {path}")
         
@@ -503,7 +558,7 @@ def download_youtube_cover(url):
                     cropped_img.save(path, 'JPEG')
         return path
     except Exception as e:
-        log(log_tag, f"Ошибка при скачивании/сохранении файла: {e}")
+        log(log_tag, f"Ошибка при скачивании/сохранении файла: {e}.")
     return None
 def download_youtubemusic_cover(url): # Скачивание ютуб обложки от видео вместе с вырезанем её под квадрат
     log_tag = "Yt Music Cover"
@@ -517,7 +572,7 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
 
     if img_file and os.path.exists(img_file):
         try:
-            log(log_tag, f"Исходный файл найден ({img_file}). Начало анализа краев...")
+            log(log_tag, f"Исходный файл найден ({img_file}). Начало анализа краев.")
             with Image.open(img_file) as img:
                 img = img.convert("RGB")
                 width, height = img.size
@@ -538,16 +593,16 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
                     log(log_tag, f"Анализ пустоты по бокам: Лево={is_left_empty}, Право={is_right_empty}")
                     
                     if is_left_empty and is_right_empty:
-                        log(log_tag, f"По бокам пусто. Обрезаем картинку под квадрат...")
+                        log(log_tag, f"По бокам пусто. Обрезаем картинку под квадрат.")
                         img_final = img.crop((left_margin, 0, right_margin, height))
                     else:
-                        log(log_tag, f"Обнаружены детали по бокам. Достраиваем полями сверху/снизу...")
+                        log(log_tag, f"Обнаружены детали по бокам. Достраиваем полями сверху/снизу.")
                         bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
                         img_final = Image.new("RGB", (width, width), bg_color)
                         img_final.paste(img, (0, (width - height) // 2))
                         
                 elif width < height:
-                    log(log_tag, f"Картинка вертикальная. Начало анализа верхних и нижних полей...")
+                    log(log_tag, f"Картинка вертикальная. Начало анализа верхних и нижних полей.")
                     img_np = numpy.array(img)
                     crop_needed = height - width
                     top_margin = crop_needed // 2
@@ -562,10 +617,10 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
                     log(log_tag, f"Анализ пустоты сверху/снизу: Верх={is_top_empty}, Низ={is_bottom_empty}")
                     
                     if is_top_empty and is_bottom_empty:
-                        log(log_tag, f"Сверху и снизу пусто. Обрезаем картинку под квадрат...")
+                        log(log_tag, f"Сверху и снизу пусто. Обрезаем картинку под квадрат.")
                         img_final = img.crop((0, top_margin, width, bottom_margin))
                     else:
-                        log(log_tag, f"Обнаружены детали сверху/снизу. Достраиваем полями по бокам...")
+                        log(log_tag, f"Обнаружены детали сверху/снизу. Достраиваем полями по бокам.")
                         bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
                         img_final = Image.new("RGB", (height, height), bg_color)
                         img_final.paste(img, ((height - width) // 2, 0))
@@ -584,47 +639,46 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
 #mp3
 def download_soundcloud_mp3(url):
     log_tag = "SC mp3"
-    info = None
-    while info == None:
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-                info = ydl.extract_info(url, download=False)
-            break
-        except Exception as e:
-            log(log_tag, f"Ошибка, через 30 секунд ещё одна попытка")
-            time.sleep(30)
-    ext = info.get('ext')
-    filename = url_to_name.soundcloud_track(url)
-    path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.{ext}")
+    path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.mp3")
     if os.path.exists(path):
-        log(log_tag,f"файл уже существует, пропускаем: {path}")
+        log(log_tag,f"mp3 файл уже существует, пропускаем: {path}")
         return path
-    os.makedirs(dirs_paths.SoundCloud_Music, exist_ok=True)
-    save_path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.%(ext)s")
     opts = ydl_opts.soundcloud_audio_track.copy()
-    opts['outtmpl'] = save_path
-    log(log_tag,f"Скачивание mp3 с SoundCloud: {filename}...")
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        ydl.download([url])
-        return path
+    opts['outtmpl'] = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.%(ext)s")
+    log(log_tag,f"Скачивание mp3 с SoundCloud: {filename}.")
+    while True:
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.download([url])
+                return path
+        except Exception as e:
+            log(log_tag,f"Ошибка при скачивании: {e}.")
+            log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
+            time.sleep(ErrorSleep)
     return None
 def download_youtube_mp3(url):
     log_tag = "Yt mp3"
-    filename = url_to_filename.youtube_track(url)
+    
+    filename = url_to_name.youtube_track(url)
     path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
-
+    
     if os.path.exists(path):
-        log(log_tag,f"Трек YouTube уже существует, пропускаем: {path}")
+        log(log_tag,f"mp3 файл уже существует, пропускаем: {path}")
         return path
 
-    os.makedirs(dirs_paths.Youtube_Music, exist_ok=True)
     save_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.%(ext)s")
-    
     opts = ydl_opts.youtube_audio_track.copy()
     opts['outtmpl'] = save_path
-    
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        ydl.download([url])
-        return path
+
+    while True:
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.download([url])
+                return path
+        except Exception as e:
+            log(log_tag,f"Ошибка при скачивании: {e}.")
+            log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
+            time.sleep(ErrorSleep)
     return None
+download_youtube_mp3("https://www.youtube.com/watch?v=yRk8i5ixaNY")
 download_soundcloud_mp3("https://soundcloud.com/nekofard-archive/flower-man")

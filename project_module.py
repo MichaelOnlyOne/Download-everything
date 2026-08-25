@@ -2,14 +2,13 @@ import os
 import time
 from io import BytesIO
 from urllib.parse import urlparse
-
 from PIL import Image
 import yt_dlp
 import requests
 import re
 import regex
 import mutagen
-import numpy as np
+import numpy
 
 def write_if_empty(file_path, text):
     if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
@@ -394,220 +393,219 @@ class url_to_filename:
         except Exception:
             return "youtube_playlist"
 def download_soundcloud_cover(url):
-    filename = url_to_filename.soundcloud_track(url)
-    filename = makesafename(filename)
+filename = url_to_filename.soundcloud_track(url)
+filename = makesafename(filename)
 
-    full_path = os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")
+full_path = os.path.join(dirs_paths.SoundCloud_Covers, f"{filename}_cover.jpg")
 
-    if os.path.exists(full_path):
-        print(f"Обложка SoundCloud уже существует, пропускаем: {full_path}")
-        return full_path
+if os.path.exists(full_path):
+print(f"Обложка SoundCloud уже существует, пропускаем: {full_path}")
+return full_path
 
-    with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
-        info = ydl.extract_info(url, download=False)
-    img_url = info.get('thumbnail')
-    
-    if img_url:
-        os.makedirs(dirs_paths.SoundCloud_Covers, exist_ok=True)
-        try:
-            response = requests.get(img_url)
-            img = Image.open(BytesIO(response.content))
-            img = img.convert('RGB')
-            img.save(full_path, 'JPEG')
-            print(f"Обложка SoundCloud сохранена: {full_path}")
-            return full_path
-        except Exception as e:
-            print(f"Не удалось обработать обложку SoundCloud: {e}")
-    return None
+with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+info = ydl.extract_info(url, download=False)
+img_url = info.get('thumbnail')
+
+if img_url:
+os.makedirs(dirs_paths.SoundCloud_Covers, exist_ok=True)
+try:
+response = requests.get(img_url)
+img = Image.open(BytesIO(response.content))
+img = img.convert('RGB')
+img.save(full_path, 'JPEG')
+print(f"Обложка SoundCloud сохранена: {full_path}")
+return full_path
+except Exception as e:
+print(f"Не удалось обработать обложку SoundCloud: {e}")
+return None
 def download_youtube_cover(url):
-    filename = url_to_filename.youtube_track(url)
-    filename = makesafename(filename)
+filename = url_to_filename.youtube_track(url)
+filename = makesafename(filename)
 
-    full_path = os.path.join(dirs_paths.Youtube_Covers, f"{filename}_cover.jpg")
-    print(full_path)
-    if os.path.exists(full_path):
-        print(f"[YouTube Cover] Файл обложки уже на диске: {full_path}")
-        return full_path
+full_path = os.path.join(dirs_paths.Youtube_Covers, f"{filename}_cover.jpg")
+print(full_path)
+if os.path.exists(full_path):
+print(f"[YouTube Cover] Файл обложки уже на диске: {full_path}")
+return full_path
 
-    print(f"[YouTube Cover] Запрос метаданных через yt-dlp для: {url}...")
-    with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
-        info = ydl.extract_info(url, download=False)
-    
-    img_url = info.get('thumbnail')
-    video_id = info.get('id') or info.get('video_id')
-    if img_url:
-        os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
-        try:
-            print(f"[YouTube Cover] Скачивание картинки через requests...")
+print(f"[YouTube Cover] Запрос метаданных через yt-dlp для: {url}...")
+with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
+info = ydl.extract_info(url, download=False)
+
+img_url = info.get('thumbnail')
+video_id = info.get('id') or info.get('video_id')
+if img_url:
+os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
+try:
+print(f"[YouTube Cover] Скачивание картинки через requests...")
+response = requests.get(img_url, timeout=5)
+qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
+img = None
+for quality in qualities:
+    img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
+    print(f"[YouTube Cover] Скачивание картинки через requests ({quality})...")
+    print(f"[YouTube Cover] Получена ссылка на превью: {img_url}")
+    try:
+        response = requests.get(img_url, timeout=5)
+        while response.status_code == 403:
+            print("Ошибка 403 через 30 секунд ещё одна попытка")
+            time.sleep(30)
             response = requests.get(img_url, timeout=5)
-            qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
-            img = None
-            for quality in qualities:
-                img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
-                print(f"[YouTube Cover] Скачивание картинки через requests ({quality})...")
-                print(f"[YouTube Cover] Получена ссылка на превью: {img_url}")
-                try:
-                    response = requests.get(img_url, timeout=5)
-                    while response.status_code == 403:
-                        print("Ошибка 403 через 30 секунд ещё одна попытка")
-                        time.sleep(30)
-                        response = requests.get(img_url, timeout=5)
-                    print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
-                    if response.status_code == 200:
-                        temp_img = Image.open(BytesIO(response.content))
-                        if temp_img.size == (120, 90):
-                            print(f"[YouTube Cover] Качество {quality} выдало заглушку. Пробуем ниже...")
-                            continue
-                        img = temp_img.convert('RGB')
-                        print(f"[YouTube Cover] Найдено реальное качество ({quality}) с разрешением: {img.size}")
-                        break
-                    else:
-                        print(f"[YouTube Cover] Статус {response.status_code} для {quality}, пробуем хуже...")
-                        continue
-                except requests.RequestException:
-                    print(f"[YouTube Cover] Ошибка сети при запросе {quality}, пробуем хуже...")
-                    continue
-            print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
-            img = Image.open(BytesIO(response.content))
-            img = img.convert('RGB')
-            
-            img.save(full_path, 'JPEG')
-            print(f"[YouTube Cover] Исходная обложка сохранена: {full_path}")
-            
-            with Image.open(full_path) as saved_img:
-                w, h = saved_img.width, saved_img.height
-                current_ratio = w / h
-                
-                if abs(current_ratio - 1.333) < 0.05:
-                    img_np = np.array(saved_img)
-                    
-                    row_stds = np.std(img_np, axis=(1, 2))
-                    row_means = np.mean(img_np, axis=(1, 2))
-                    is_black_row = (row_stds < 12) & (row_means < 15)
-                    
-                    top_black_lines = 0
-                    for row in is_black_row:
-                        if row:
-                            top_black_lines += 1
-                        else:
-                            break
-                            
-                    bottom_black_lines = 0
-                    for row in reversed(is_black_row):
-                        if row:
-                            bottom_black_lines += 1
-                        else:
-                            break
-                            
-                    col_stds = np.std(img_np, axis=(0, 2))
-                    col_means = np.mean(img_np, axis=(0, 2))
-                    is_black_col = (col_stds < 12) & (col_means < 15)
-                    
-                    left_black_lines = 0
-                    for col in is_black_col:
-                        if col:
-                            left_black_lines += 1
-                        else:
-                            break
-                            
-                    right_black_lines = 0
-                    for col in reversed(is_black_col):
-                        if col:
-                            right_black_lines += 1
-                        else:
-                            break
+        print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
+        if response.status_code == 200:
+            temp_img = Image.open(BytesIO(response.content))
+            if temp_img.size == (120, 90):
+                print(f"[YouTube Cover] Качество {quality} выдало заглушку. Пробуем ниже...")
+                continue
+            img = temp_img.convert('RGB')
+            print(f"[YouTube Cover] Найдено реальное качество ({quality}) с разрешением: {img.size}")
+            break
+        else:
+            print(f"[YouTube Cover] Статус {response.status_code} для {quality}, пробуем хуже...")
+            continue
+    except requests.RequestException:
+        print(f"[YouTube Cover] Ошибка сети при запросе {quality}, пробуем хуже...")
+        continue
+print(f"[YouTube Cover] Сервер ответил со статусом: {response.status_code}")
+img = Image.open(BytesIO(response.content))
+img = img.convert('RGB')
 
-                    if top_black_lines > 0 or bottom_black_lines > 0 or left_black_lines > 0 or right_black_lines > 0:
-                        cropped_img = saved_img.crop((left_black_lines, top_black_lines, w - right_black_lines, h - bottom_black_lines))
-                        cropped_img.save(full_path, 'JPEG')
-            return full_path
-        except Exception as e:
-            print(f"[YouTube Cover] Ошибка при скачивании/сохранении файла: {e}")
-    else:
-        print("[YouTube Cover] Предупреждение: В метаданных 'info' отсутствует поле 'thumbnail'!")
-    return None
+img.save(full_path, 'JPEG')
+print(f"[YouTube Cover] Исходная обложка сохранена: {full_path}")
+
+with Image.open(full_path) as saved_img:
+    w, h = saved_img.width, saved_img.height
+    current_ratio = w / h
+    
+    if abs(current_ratio - 1.333) < 0.05:
+        img_np = numpy.array(saved_img)
+        
+        row_stds = numpy.std(img_np, axis=(1, 2))
+        row_means = numpy.mean(img_np, axis=(1, 2))
+        is_black_row = (row_stds < 12) & (row_means < 15)
+        
+        top_black_lines = 0
+        for row in is_black_row:
+            if row:
+                top_black_lines += 1
+            else:
+                break
+                
+        bottom_black_lines = 0
+        for row in reversed(is_black_row):
+            if row:
+                bottom_black_lines += 1
+            else:
+                break
+                
+        col_stds = numpy.std(img_np, axis=(0, 2))
+        col_means = numpy.mean(img_np, axis=(0, 2))
+        is_black_col = (col_stds < 12) & (col_means < 15)
+        
+        left_black_lines = 0
+        for col in is_black_col:
+            if col:
+                left_black_lines += 1
+            else:
+                break
+                
+        right_black_lines = 0
+        for col in reversed(is_black_col):
+            if col:
+                right_black_lines += 1
+            else:
+                break
+
+        if top_black_lines > 0 or bottom_black_lines > 0 or left_black_lines > 0 or right_black_lines > 0:
+            cropped_img = saved_img.crop((left_black_lines, top_black_lines, w - right_black_lines, h - bottom_black_lines))
+            cropped_img.save(full_path, 'JPEG')
+return full_path
+except Exception as e:
+print(f"[YouTube Cover] Ошибка при скачивании/сохранении файла: {e}")
+else:
+print("[YouTube Cover] Предупреждение: В метаданных 'info' отсутствует поле 'thumbnail'!")
+return None
 def download_youtubemusic_cover(url):
-    filename = url_to_filename.youtube_track(url)
-    filename = makesafename(filename)
+filename = url_to_filename.youtube_track(url)
+filename = makesafename(filename)
 
-    full_path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")
+full_path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{filename}_cover.jpg")
 
-    if os.path.exists(full_path):
-        print(f"[YT Music Cover] Обложка уже на диске: {full_path}")
-        return full_path
+if os.path.exists(full_path):
+print(f"[YT Music Cover] Обложка уже на диске: {full_path}")
+return full_path
 
-    os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
+os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
+
+print("[YT Music Cover] Запуск базовой скачивалки download_youtube_cover...")
+img_file = download_youtube_cover(url)
+
+if img_file and os.path.exists(img_file):
+try:
+print(f"[YT Music Cover] Исходный файл найден ({img_file}). Начало анализа краев...")
+with Image.open(img_file) as img:
+    img = img.convert("RGB")
+    width, height = img.size
+    print(f"[YT Music Cover] Размеры картинки: {width}x{height}")
     
-    print("[YT Music Cover] Запуск базовой скачивалки download_youtube_cover...")
-    img_file = download_youtube_cover(url)
-    
-    if img_file and os.path.exists(img_file):
-        try:
-            import numpy as np
-            print(f"[YT Music Cover] Исходный файл найден ({img_file}). Начало анализа краев...")
-            with Image.open(img_file) as img:
-                img = img.convert("RGB")
-                width, height = img.size
-                print(f"[YT Music Cover] Размеры картинки: {width}x{height}")
-                
-                if width > height:
-                    img_np = np.array(img)
-                    crop_needed = width - height
-                    left_margin = crop_needed // 2
-                    right_margin = width - (crop_needed - left_margin)
-                    
-                    left_zone = img_np[:, :left_margin]
-                    right_zone = img_np[:, right_margin:]
-                    
-                    is_left_empty = np.all(np.std(left_zone, axis=(0, 1)) < 15)
-                    is_right_empty = np.all(np.std(right_zone, axis=(0, 1)) < 15)
+    if width > height:
+        img_np = numpy.array(img)
+        crop_needed = width - height
+        left_margin = crop_needed // 2
+        right_margin = width - (crop_needed - left_margin)
+        
+        left_zone = img_np[:, :left_margin]
+        right_zone = img_np[:, right_margin:]
+        
+        is_left_empty = numpy.all(numpy.std(left_zone, axis=(0, 1)) < 15)
+        is_right_empty = numpy.all(numpy.std(right_zone, axis=(0, 1)) < 15)
 
-                    print(f"[YT Music Cover] Анализ пустоты по бокам: Лево={is_left_empty}, Право={is_right_empty}")
-                    
-                    if is_left_empty and is_right_empty:
-                        print("[YT Music Cover] По бокам пусто. Обрезаем картинку под квадрат...")
-                        img_final = img.crop((left_margin, 0, right_margin, height))
-                    else:
-                        print("[YT Music Cover] Обнаружены детали по бокам. Достраиваем полями сверху/снизу...")
-                        bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
-                        img_final = Image.new("RGB", (width, width), bg_color)
-                        img_final.paste(img, (0, (width - height) // 2))
-                        
-                elif width < height:
-                    print("[YT Music Cover] Картинка вертикальная. Начало анализа верхних и нижних полей...")
-                    img_np = np.array(img)
-                    crop_needed = height - width
-                    top_margin = crop_needed // 2
-                    bottom_margin = height - (crop_needed - top_margin)
-                    
-                    top_zone = img_np[:top_margin, :]
-                    bottom_zone = img_np[bottom_margin:, :]
-                    
-                    is_top_empty = np.all(np.std(top_zone, axis=(0, 1)) < 15)
-                    is_bottom_empty = np.all(np.std(bottom_zone, axis=(0, 1)) < 15)
-                    
-                    print(f"[YT Music Cover] Анализ пустоты сверху/снизу: Верх={is_top_empty}, Низ={is_bottom_empty}")
-                    
-                    if is_top_empty and is_bottom_empty:
-                        print("[YT Music Cover] Сверху и снизу пусто. Обрезаем картинку под квадрат...")
-                        img_final = img.crop((0, top_margin, width, bottom_margin))
-                    else:
-                        print("[YT Music Cover] Обнаружены детали сверху/снизу. Достраиваем полями по бокам...")
-                        bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
-                        img_final = Image.new("RGB", (height, height), bg_color)
-                        img_final.paste(img, ((height - width) // 2, 0))
-                else:
-                    print("[YT Music Cover] Картинка уже квадратная. Оставляем оригинал.")
-                    img_final = img
-                
-                img_final.save(full_path, "JPEG", quality=95)
-                print(f"[YT Music Cover] Финальный квадрат сохранен: {full_path}")
-                return full_path
-        except Exception as e:
-            print(f"[YT Music Cover] Ошибка в процессе обработки квадрата: {e}")
+        print(f"[YT Music Cover] Анализ пустоты по бокам: Лево={is_left_empty}, Право={is_right_empty}")
+        
+        if is_left_empty and is_right_empty:
+            print("[YT Music Cover] По бокам пусто. Обрезаем картинку под квадрат...")
+            img_final = img.crop((left_margin, 0, right_margin, height))
+        else:
+            print("[YT Music Cover] Обнаружены детали по бокам. Достраиваем полями сверху/снизу...")
+            bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
+            img_final = Image.new("RGB", (width, width), bg_color)
+            img_final.paste(img, (0, (width - height) // 2))
+            
+    elif width < height:
+        print("[YT Music Cover] Картинка вертикальная. Начало анализа верхних и нижних полей...")
+        img_np = numpy.array(img)
+        crop_needed = height - width
+        top_margin = crop_needed // 2
+        bottom_margin = height - (crop_needed - top_margin)
+        
+        top_zone = img_np[:top_margin, :]
+        bottom_zone = img_np[bottom_margin:, :]
+        
+        is_top_empty = numpy.all(numpy.std(top_zone, axis=(0, 1)) < 15)
+        is_bottom_empty = numpy.all(numpy.std(bottom_zone, axis=(0, 1)) < 15)
+        
+        print(f"[YT Music Cover] Анализ пустоты сверху/снизу: Верх={is_top_empty}, Низ={is_bottom_empty}")
+        
+        if is_top_empty and is_bottom_empty:
+            print("[YT Music Cover] Сверху и снизу пусто. Обрезаем картинку под квадрат...")
+            img_final = img.crop((0, top_margin, width, bottom_margin))
+        else:
+            print("[YT Music Cover] Обнаружены детали сверху/снизу. Достраиваем полями по бокам...")
+            bg_color = img.resize((1, 1), resample=3).getpixel((0, 0))
+            img_final = Image.new("RGB", (height, height), bg_color)
+            img_final.paste(img, ((height - width) // 2, 0))
     else:
-        print(f"[YT Music Cover] Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
-    return None
+        print("[YT Music Cover] Картинка уже квадратная. Оставляем оригинал.")
+        img_final = img
+    
+    img_final.save(full_path, "JPEG", quality=95)
+    print(f"[YT Music Cover] Финальный квадрат сохранен: {full_path}")
+    return full_path
+except Exception as e:
+print(f"[YT Music Cover] Ошибка в процессе обработки квадрата: {e}")
+else:
+print(f"[YT Music Cover] Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
+return None
 
 
 def download_rutube_video(url):
