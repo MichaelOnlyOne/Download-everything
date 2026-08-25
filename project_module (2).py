@@ -421,118 +421,103 @@ def download_soundcloud_cover(url):
 def download_youtube_cover(url):
     log_tag = "Yt Cover"
     path = os.path.join(dirs_paths.Youtube_Covers, f"{url_to_filename.youtube_track(url)}_cover.jpg")
+    if os.path.exists(path):
+        log(log_tag, f"Обложка уже существует: {path}")
+        return path
 
-    if os.path.exists(full_path):
-        log(log_tag, f"Обложка уже существует: {full_path}")
-        return full_path
-
-    log(log_tag, f"Запрос метаданных через yt-dlp для: {url}...")
+    log(log_tag, f"Получение id через yt-dlp для: {url}")
     with yt_dlp.YoutubeDL(ydl_opts.youtube_cover) as ydl:
         info = ydl.extract_info(url, download=False)
     video_id = info.get('id')
-    if img_url:
-        os.makedirs(dirs_paths.Youtube_Covers, exist_ok=True)
-        try:
-            log(log_tag, f"Скачивание картинки через requests...")
-            qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
-            img = None
-            for quality in qualities:
-                img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
-                log(log_tag, f"Скачивание картинки через requests ({quality})...")
-                log(log_tag, f"Получена ссылка на превью: {img_url}")
-                try:
-                    response = requests.get(img_url, timeout=5)
-                    while response.status_code == 403:
-                        log(log_tag, f"Ошибка 403 через 30 секунд ещё одна попытка")
-                        time.sleep(30)
-                        response = requests.get(img_url, timeout=5)
-                    log(log_tag, f"Сервер ответил со статусом: {response.status_code}")
-                    if response.status_code == 200:
-                        temp_img = Image.open(BytesIO(response.content))
-                        if temp_img.size == (120, 90):
-                            log(log_tag, f"Качество {quality} выдало заглушку. Пробуем ниже...")
-                            continue
-                        img = temp_img.convert('RGB')
-                        log(log_tag, f"Найдено реальное качество ({quality}) с разрешением: {img.size}")
-                        break
-                    else:
-                        log(log_tag, f"Статус {response.status_code} для {quality}, пробуем хуже...")
-                        continue
-                except requests.RequestException:
-                    log(log_tag, f"Ошибка сети при запросе {quality}, пробуем хуже...")
-                    continue
-            log(log_tag, f"Сервер ответил со статусом: {response.status_code}")
-            img = Image.open(BytesIO(response.content))
-            img = img.convert('RGB')
-            
-            img.save(full_path, 'JPEG')
-            log(log_tag, f"Исходная обложка сохранена: {full_path}")
-            
-            with Image.open(full_path) as saved_img:
-                w, h = saved_img.width, saved_img.height
-                current_ratio = w / h
-                
-                if abs(current_ratio - 1.333) < 0.05:
-                    img_np = numpy.array(saved_img)
-                    
-                    row_stds = numpy.std(img_np, axis=(1, 2))
-                    row_means = numpy.mean(img_np, axis=(1, 2))
-                    is_black_row = (row_stds < 12) & (row_means < 15)
-                    
-                    top_black_lines = 0
-                    for row in is_black_row:
-                        if row:
-                            top_black_lines += 1
-                        else:
-                            break
-                            
-                    bottom_black_lines = 0
-                    for row in reversed(is_black_row):
-                        if row:
-                            bottom_black_lines += 1
-                        else:
-                            break
-                            
-                    col_stds = numpy.std(img_np, axis=(0, 2))
-                    col_means = numpy.mean(img_np, axis=(0, 2))
-                    is_black_col = (col_stds < 12) & (col_means < 15)
-                    
-                    left_black_lines = 0
-                    for col in is_black_col:
-                        if col:
-                            left_black_lines += 1
-                        else:
-                            break
-                            
-                    right_black_lines = 0
-                    for col in reversed(is_black_col):
-                        if col:
-                            right_black_lines += 1
-                        else:
-                            break
 
-                    if top_black_lines > 0 or bottom_black_lines > 0 or left_black_lines > 0 or right_black_lines > 0:
-                        cropped_img = saved_img.crop((left_black_lines, top_black_lines, w - right_black_lines, h - bottom_black_lines))
-                        cropped_img.save(full_path, 'JPEG')
-            return full_path
-        except Exception as e:
-            log(log_tag, f"Ошибка при скачивании/сохранении файла: {e}")
-    else:
-        log(log_tag, f"Предупреждение: В метаданных 'info' отсутствует поле 'thumbnail'!")
+    try:
+        qualities = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault', 'default']
+        for quality in qualities:
+            img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
+            log(log_tag, f"Скачивание {quality}")
+            try:
+                response = requests.get(img_url, timeout=5)
+                while response.status_code == 403:
+                    log(log_tag, f"Ошибка 403 через 30 секунд ещё одна попытка")
+                    time.sleep(30)
+                    response = requests.get(img_url, timeout=5)
+                log(log_tag, f"Сервер ответил со статусом: {response.status_code}")
+                if response.status_code == 200:
+                    temp_img = Image.open(BytesIO(response.content))
+                    if temp_img.size == (120, 90):
+                        log(log_tag, f"Качество {quality} выдало заглушку. Пробуем ниже.")
+                        continue
+                    img = temp_img.convert('RGB')
+                    img.save(path, 'JPEG')
+                    log(log_tag, f"Найдено реальное качество ({quality}) с разрешением: {img.size}")
+                    break
+                else:
+                    log(log_tag, f"Статус {response.status_code} для {quality}, пробуем хуже.")
+                    continue
+            except requests.RequestException:
+                log(log_tag,"Какая-то ошибка, ухужшение качества.")
+                continue
+        log(log_tag, f"Исходная обложка сохранена: {path}")
+        
+        with Image.open(path) as saved_img: 
+            '''
+            Эту микро обрезку (если 4:3) я попросил сдлелать Gemini (только логи мои)
+            и я не очень разбираюсь как она работает,
+            а ещё она не работает на шортсах
+            '''
+            w, h = saved_img.width, saved_img.height
+            current_ratio = w / h
+            if abs(current_ratio - 1.333) < 0.05:
+                log(log_tag, f"Похоже обложка 4:3 и есть шанс что она на самом деле имеет особое соотнощшение сторон")
+                img_np = numpy.array(saved_img)
+                row_stds = numpy.std(img_np, axis=(1, 2))
+                row_means = numpy.mean(img_np, axis=(1, 2))
+                is_black_row = (row_stds < 12) & (row_means < 15)
+                top_black_lines = 0
+                for row in is_black_row:
+                    if row:
+                        top_black_lines += 1
+                    else:
+                        break
+                bottom_black_lines = 0
+                for row in reversed(is_black_row):
+                    if row:
+                        bottom_black_lines += 1
+                    else:
+                        break
+                col_stds = numpy.std(img_np, axis=(0, 2))
+                col_means = numpy.mean(img_np, axis=(0, 2))
+                is_black_col = (col_stds < 12) & (col_means < 15)
+                
+                left_black_lines = 0
+                for col in is_black_col:
+                    if col:
+                        left_black_lines += 1
+                    else:
+                        break
+                right_black_lines = 0
+                for col in reversed(is_black_col):
+                    if col:
+                        right_black_lines += 1
+                    else:
+                        break
+                if top_black_lines > 0 or bottom_black_lines > 0 or left_black_lines > 0 or right_black_lines > 0:
+                    cropped_img = saved_img.crop((left_black_lines, top_black_lines, w - right_black_lines, h - bottom_black_lines))
+                    cropped_img.save(path, 'JPEG')
+        return path
+    except Exception as e:
+        log(log_tag, f"Ошибка при скачивании/сохранении файла: {e}")
     return None
 def download_youtubemusic_cover(url): # Скачивание ютуб обложки от видео вместе с вырезанем её под квадрат
     log_tag = "Yt Music Cover"
-    full_path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{url_to_filename.youtube_track(url)}_cover.jpg")
+    path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{url_to_filename.youtube_track(url)}_cover.jpg")
+    if os.path.exists(path):
+        log(log_tag, f"Обложка уже существует: {path}")
+        return path
 
-    if os.path.exists(full_path):
-        log(log_tag, f"Обложка уже на диске: {full_path}")
-        return full_path
-
-    os.makedirs(dirs_paths.YoutubeMusic_Covers, exist_ok=True)
-    
-    log(log_tag, f"Запуск базовой скачивалки download_youtube_cover...")
+    log(log_tag, f"Скачивание Обложки с ютуб")
     img_file = download_youtube_cover(url)
-    
+
     if img_file and os.path.exists(img_file):
         try:
             log(log_tag, f"Исходный файл найден ({img_file}). Начало анализа краев...")
@@ -591,11 +576,12 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
                     log(log_tag, f"Картинка уже квадратная. Оставляем оригинал.")
                     img_final = img
                 
-                img_final.save(full_path, "JPEG", quality=95)
-                log(log_tag, f"Финальный квадрат сохранен: {full_path}")
-                return full_path
+                img_final.save(path, "JPEG", quality=95)
+                log(log_tag, f"Финальный квадрат сохранен: {path}")
+                return path
         except Exception as e:
             log(log_tag, f"Ошибка в процессе обработки квадрата: {e}")
     else:
-        log(log_tag, f"Ошибка: Базовая скачивалка вернула пустой путь или файл физически отсутствует!")
+        log(log_tag, f"Ошибка: Обложка не была скачана")
     return None
+download_youtubemusic_cover("https://www.youtube.com/watch?v=zdJNqba6WA4")
