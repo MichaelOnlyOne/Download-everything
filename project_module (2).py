@@ -177,6 +177,22 @@ write_if_empty(files_paths.Youtube_Music_links, "# Вставьте сюда с�
 write_if_empty(files_paths.Youtube_Videos_links, "# Вставьте сюда ссылки на видео Youtube\n")
 write_if_empty(files_paths.Rutube_Videos_links, "# Вставьте сюда ссылки на видео Rutube\n")
 write_if_empty(files_paths.log, "")
+#Входы в аккаунты
+def login_youtube():
+    log_tag = "Yt login"
+    log(log_tag,"oauth для ютуба")
+    login_opts = {
+        'username': 'oauth',
+        'skip_download': True,
+        'quiet': False,
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(login_opts) as ydl:
+            ydl.extract_info("https://youtube.com", download=False)
+        log(log_tag,"Успешный вход")
+    except Exception as e:
+          log(log_tag,f"Не удалось войти: {e}")
 #Парамептры для модуля - yt_dlp
 class ydl_opts():
     _base = {
@@ -184,6 +200,7 @@ class ydl_opts():
         'no_warnings': True,
         'ffmpeg_location': dirs_paths.bin,
     }
+    _youtube_cookie = {'username': 'oauth'} if yt_dlp.YoutubeDL({'quiet': True}).cache.load('youtube-oauth2', 'token_data') is not None else {}
     soundcloud_info = {
         **_base,
         'extract_flat': 'in_playlist',
@@ -191,10 +208,12 @@ class ydl_opts():
     }
     youtube_info = {
         **_base,
+        **_youtube_cookie,
         'skip_download': True,
     }   
     youtube_cover = {
         **_base,
+        **_youtube_cookie,
         'noplaylist': True,
         'extract_flat': False,
     }
@@ -221,6 +240,7 @@ class ydl_opts():
     }
     youtube_audio_track = {
         **_base,
+        **_youtube_cookie,
         'noplaylist': True,
         'format': 'bestaudio/ba/worstaudio',
         'postprocessors': [{
@@ -231,6 +251,7 @@ class ydl_opts():
     }
     youtube_video_track = {
         **_base,
+        **_youtube_cookie,
         'noplaylist': True,
         'format': 'bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best',
     }
@@ -680,5 +701,6 @@ def download_youtube_mp3(url):
             log(log_tag,f"Повторная попытка через {ErrorSleep} секунд.")
             time.sleep(ErrorSleep)
     return None
-download_youtube_mp3("https://www.youtube.com/watch?v=yRk8i5ixaNY")
-download_soundcloud_mp3("https://soundcloud.com/nekofard-archive/flower-man")
+login_youtube()
+#download_youtube_mp3("https://www.youtube.com/watch?v=yRk8i5ixaNY")
+#download_soundcloud_mp3("https://soundcloud.com/nekofard-archive/flower-man")
