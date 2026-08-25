@@ -597,7 +597,7 @@ def download_soundcloud_mp3(url):
             log(log_tag, f"Ошибка, через 30 секунд ещё одна попытка")
             time.sleep(30)
     ext = info.get('ext')
-    filename = url_to_filename.soundcloud_track(url)
+    filename = url_to_name.soundcloud_track(url)
     path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.{ext}")
     if os.path.exists(path):
         log(log_tag,f"mp3 файл уже существует, пропускаем: {path}")
