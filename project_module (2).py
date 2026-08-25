@@ -400,7 +400,7 @@ class url_to_name:
 #Обложки
 def download_soundcloud_cover(url):
     log_tag = "SC Cover"
-    path = os.path.join(dirs_paths.SoundCloud_Covers, f"{url_to_filename.soundcloud_track(url)}_cover.jpg")
+    path = os.path.join(dirs_paths.SoundCloud_Covers, f"{url_to_name.soundcloud_track(url)}_cover.jpg")
     if os.path.exists(path):
         log(log_tag,f"Обложка уже существует: {path}")
         return path
@@ -420,7 +420,7 @@ def download_soundcloud_cover(url):
     return None
 def download_youtube_cover(url):
     log_tag = "Yt Cover"
-    path = os.path.join(dirs_paths.Youtube_Covers, f"{url_to_filename.youtube_track(url)}_cover.jpg")
+    path = os.path.join(dirs_paths.Youtube_Covers, f"{url_to_name.youtube_track(url)}_cover.jpg")
     if os.path.exists(path):
         log(log_tag, f"Обложка уже существует: {path}")
         return path
@@ -510,7 +510,7 @@ def download_youtube_cover(url):
     return None
 def download_youtubemusic_cover(url): # Скачивание ютуб обложки от видео вместе с вырезанем её под квадрат
     log_tag = "Yt Music Cover"
-    path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{url_to_filename.youtube_track(url)}_cover.jpg")
+    path = os.path.join(dirs_paths.YoutubeMusic_Covers, f"{url_to_name.youtube_track(url)}_cover.jpg")
     if os.path.exists(path):
         log(log_tag, f"Обложка уже существует: {path}")
         return path
