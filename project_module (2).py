@@ -584,5 +584,50 @@ def download_youtubemusic_cover(url): # Скачивание ютуб облож
     else:
         log(log_tag, f"Ошибка: Обложка не была скачана")
     return None
-download_youtubemusic_cover("https://www.youtube.com/watch?v=zdJNqba6WA4")
-download_soundcloud_cover("https://soundcloud.com/nekofard-archive/flower-man")
+#mp3
+def download_soundcloud_mp3(url):
+    log_tag = "SC mp3"
+    info = None
+    while info == None:
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+                info = ydl.extract_info(url, download=False)
+            break
+        except Exception as e:
+            log(log_tag, f"Ошибка, через 30 секунд ещё одна попытка")
+            time.sleep(30)
+    ext = info.get('ext')
+    log(log_tag,f"Расширение {ext}")
+    path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}{ext}")
+    if os.path.exists(path):
+        log(log_tag,f"mp3 файл уже существует, пропускаем: {path}")
+        return path
+    os.makedirs(dirs_paths.SoundCloud_Music, exist_ok=True)
+    save_path = os.path.join(dirs_paths.SoundCloud_Music, f"{filename}.%(ext)s")
+    opts = ydl_opts.soundcloud_audio_track.copy()
+    opts['outtmpl'] = save_path
+    log(log_tag,f"Скачивание mp3 с SoundCloud: {filename}...")
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+        return path
+    return None
+def download_youtube_mp3(url):
+    log_tag = "Yt mp3"
+    filename = url_to_filename.youtube_track(url)
+    path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.mp3")
+
+    if os.path.exists(path):
+        log(log_tag,f"Трек YouTube уже существует, пропускаем: {path}")
+        return path
+
+    os.makedirs(dirs_paths.Youtube_Music, exist_ok=True)
+    save_path = os.path.join(dirs_paths.Youtube_Music, f"{filename}.%(ext)s")
+    
+    opts = ydl_opts.youtube_audio_track.copy()
+    opts['outtmpl'] = save_path
+    
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        ydl.download([url])
+        return path
+    return None
+download_soundcloud_mp3("https://soundcloud.com/nekofard-archive/flower-man")
