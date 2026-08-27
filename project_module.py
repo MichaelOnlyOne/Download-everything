@@ -849,7 +849,7 @@ def download_youtube_music_playlist(url, params):
                 time.sleep(ErrorSleep)
     playlist_title = playlist_info.get('title', 'Untitled Playlist')
     playlist_unique_title = url_to_name.youtube_playlist_for_info(url,params["AddAuthorNameAtTheStart"],params["AddPlatformNameAndIdToAlbumName"])
-    safe_name = url_to_name.youtube_playlist(url)
+    safe_name = url_to_name.youtube_playlist_folder(url)
     
     if params["SaveToFolder"]:
         target_dir = os.path.join(dirs_paths.Youtube_Music, safe_name)
