@@ -779,6 +779,7 @@ def download_soundcloud_playlist(url, params):
     log(log_tag, f"\nНачало обработки плейлиста: {playlist_unique_title} (Всего треков: {total_tracks})")
     for index, entry in enumerate(entries, start=1):
         try:
+            str_index = str(index).zfill(padding_width)
             if not entry:
                 continue
             track_url = entry.get('url') or entry.get('webpage_url') or entry.get('url_transparent')
