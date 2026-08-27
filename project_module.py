@@ -490,11 +490,11 @@ def download_youtube_cover(url):
             img_url = f"https://i.ytimg.com/vi/{video_id}/{quality}.jpg"
             log(log_tag, f"Скачивание {quality}")
             try:
-                response = requests.get(img_url, timeout=5)
+                response = requests.get(img_url)
                 while response.status_code == 403:
                     log(log_tag, f"Ошибка 403 через {ErrorSleep} секунд ещё одна попытка")
                     time.sleep(ErrorSleep)
-                    response = requests.get(img_url, timeout=5)
+                    response = requests.get(img_url)
                 log(log_tag, f"Сервер ответил со статусом: {response.status_code}")
                 if response.status_code == 200:
                     temp_img = Image.open(BytesIO(response.content))
