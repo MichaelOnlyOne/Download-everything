@@ -462,8 +462,8 @@ def download_soundcloud_cover(url):
                 img.save(path, 'JPEG')
                 log(log_tag, f"Обложка сохранена: {path}.")
                 return path
-            except Exception as e:
-                log(log_tag, f"Не удалось обработать обложку: {e}.")
+            except Exception:
+                log(log_tag, f"Не удалось обработать обложку.")
                 log(log_tag, f"Повторная попытка через {ErrorSleep} секунд.")
                 time.sleep(ErrorSleep)
     return None
