@@ -1,9 +1,9 @@
 from pathlib import Path
 bin_dir = Path(__file__).resolve().parent
 texts_dir = bin_dir.parent / "texts"
+languages_dict = {}
 for file_path in texts_dir.glob("*.lang"):
     file_translations = {}
-    
     with open(file_path, "r", encoding="utf-8") as file:
         for line in file:
             line = line.strip()
