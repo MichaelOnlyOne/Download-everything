@@ -1,1 +1,12 @@
-123=Проверка звука
+inputnumber.neutralnumber=Введи число (натуральное).
+inputnumber.range=Введи число в диапазоне %a% — %b%.
+filenotexist=Файл %file% не существует!
+filealreadyexist=Файл %file% уже существует.
+filesaved=Файл %file% сохранен.
+filecreated=Файл %file% создан.
+filereadacted=Файл %file% отредактирован.
+downloading=Скачивание %file% с %platform%.
+retrying=Ошибка, повторная попытка через %time% секунд.
+obtaininginfo=Получение информации...
+inforeceived=Информация получена.
+linktoimage=Ссылка на изображение: %link%.

@@ -1,20 +1,29 @@
 from pathlib import Path
-bin_dir = Path(__file__).resolve().parent
-texts_dir = bin_dir.parent / "texts"
-languages_dict = {}
-for file_path in texts_dir.glob("*.lang"):
-    file_translations = {}
+texts_dir = Path(__file__).resolve().parent.parent / "texts"
+lang={}
+def load(filename=None):
+    global lang
+    file_path = texts_dir / f"{filename}.lang"
+    lang = {}
+    if filename==None or not file_path.exists():
+        return lang
     with open(file_path, "r", encoding="utf-8") as file:
         for line in file:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
+            line = line[:-1]
             if "=" in line:
                 key, value = line.split("=", 1)
-                file_translations[key.strip()] = value.strip()
-    lang_name = file_path.stem 
-    languages_dict[lang_name] = file_translations
-def getword(key, lang="ru_RU"):
-    if lang in languages_dict and key in languages_dict[lang]:
-        return languages_dict[lang][key]
-    return key
+                lang[key] = value
+    return lang
+
+
+def getword(key,parametrs={}):
+    if key in lang:
+        text = lang[key]
+        parametrs[""] = "\n"
+        for key, value in parametrs.items():
+            text = text.replace(f"%{key}%",str(value))
+    else:
+        text = key
+        for key, value in parametrs.items():
+            text += f"; %{key}% = \"{value}\""
+    return text
