@@ -4,77 +4,77 @@ from PIL import Image
 from urllib.parse import urlparse
 from . import language,log
 ErrorSleep=30#Задержка перед повторной попыткой
-def setlang(lang=None):
-    language.load(lang)
 #Парамтеры для скачивания
 class ydl_opts():
     _base = {
-        'quiet': True,
-        'no_warnings': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['default', 'web_embedded']
+        "quiet": True,
+        "no_warnings": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["default", "web_embedded"]
             }
         }
     }
     soundcloud_track = {
         **_base,
-        'noplaylist': True,
-        'format': 'http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredquality': '192',
+        "noplaylist": True,
+        "format": "http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio",
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredquality": "192",
         }],
     }
     soundcloud_info = {
         **_base,
-        'extract_flat': 'in_playlist',
-        'skip_download': True,
+        "extract_flat": "in_playlist",
+        "skip_download": True,
     }
     youtube_info = {
         **_base,
-        'skip_download': True,
+        "skip_download": True,
     }   
     youtube_cover = {
         **_base,
-        'noplaylist': True,
-        'extract_flat': False,
+        "noplaylist": True,
+        "extract_flat": False,
     }
     youtube_track = {
         **_base,
-        'noplaylist': True,
-        'format': 'bestaudio/ba/worstaudio',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredquality': '192',
+        "noplaylist": True,
+        "format": "bestaudio/ba/worstaudio",
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredquality": "192",
         }],
     }
     youtube_video = {
         **_base,
-        'noplaylist': True,
-        'format': 'bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best',
+        "noplaylist": True,
+        "format": "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best",
     }
     rutube_video = {
         **_base,
-        'noplaylist': True,
-        'format': 'bestvideo+bestaudio/best',
+        "noplaylist": True,
+        "format": "bestvideo+bestaudio/best",
     }
     rutube_info = {
         **_base,
-        'skip_download': True,
+        "skip_download": True,
     }
     vk_video = {
         **_base,
-        'noplaylist': True,
-        'format': 'best[ext=mp4]/best',
-        'format_sort': ['proto:https', 'ext:mp4:m4a'],
+        "noplaylist": True,
+        "format": "best[ext=mp4]/best",
+        "format_sort": ["proto:https", "ext:mp4:m4a"],
     }
     vk_info = {
         **_base,
-        'noplaylist': True,
-        'skip_download': True,
+        "noplaylist": True,
+        "skip_download": True,
     }
-def set_ffmpeg_location(path):
+def set_ffmpeg_location(path = None):
+    if path is None:
+        return
     configs = [
         ydl_opts._base,
         ydl_opts.soundcloud_track,
@@ -89,7 +89,7 @@ def set_ffmpeg_location(path):
         ydl_opts.vk_info
     ]
     for config in configs:
-        config['ffmpeg_location'] = path
+        config["ffmpeg_location"] = path
 def set_youtube_cookies(path):
     configs = [
         ydl_opts.youtube_info,
@@ -100,13 +100,15 @@ def set_youtube_cookies(path):
     
     if path and os.path.exists(path) and os.path.getsize(path) > 0:
         for config in configs:
-            config['cookiefile'] = path
+            config["cookiefile"] = path
     else:
         for config in configs:
-            config.pop('cookiefile', None)
+            config.pop("cookiefile", None)
 #Параметры для скачивания конец
 #Трек SoundCloud
-def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",coversfolder=".",albuminfo={"title":"SoundCloud"},updateinfo=False,tracknumber=None):
+def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",coversfolder=".",albuminfo=None,updateinfo=False,tracknumber=None):
+    if albuminfo is None:
+        albuminfo = {"title":"SoundCloud"}
     info = None
     log.log(language.getword("obtaininginfo"))
     #получение информации
@@ -119,25 +121,26 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
     #информация получена её перефращииование
-    normal_url = info.get('webpage_url', url)
-    path_parts = [p for p in urlparse(normal_url).path.split('/') if p]
+    normal_url = info.get("webpage_url", url)
+    path_parts = [p for p in urlparse(normal_url).path.split("/") if p]
     info = {
-        "artists":info.get('artists'),
-        "title":info.get('title'),
-        "trackext":info.get('ext'),
+        "title":info.get("title"),
+        "artists":info.get("artists"),
+        "uploader":info.get("uploader"),
+        "trackext":info.get("ext"),
         "albuminfo":albuminfo,
-        "description":info.get('description'),
-        "license":info.get('license'),
-        "thumbnail":info.get('thumbnail'),
-        "tags":info.get('tags'),
-        "upload_date":info.get('upload_date'),
+        "description":info.get("description"),
+        "license":info.get("license"),
+        "thumbnail":info.get("thumbnail"),
+        "tags":info.get("tags"),
+        "upload_date":info.get("upload_date"),
         "authorfromurl":path_parts[-2],
-        "titlefromurl":path_parts[-1].split('?')[0]
+        "titlefromurl":path_parts[-1].split("?")[0]
     }
-    if tracknumber.isdigit():
+    if isinstance(tracknumber, int):
         info["tracknumber"] = tracknumber
     del normal_url,path_parts
-    filename = f"{info['authorfromurl']} {info['titlefromurl']}"
+    filename = f"{info["authorfromurl"]} {info["titlefromurl"]}"
     #изображение
     response = None
     log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
@@ -154,24 +157,24 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
     info["thumbnailext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
     info["thumbnailformat"] = img.format
     if download:
-        covername=f"{filename}.{info['thumbnailext']}"
+        covername=f"{filename}.{info["thumbnailext"]}"
         path = os.path.join(coversfolder,covername)
         if os.path.exists(path):
             log.log(language.getword("filealreadyexist",{"file":covername}))
         else:
-            img = img.convert('RGB')
+            img = img.convert("RGB")
             img.save(path,info["thumbnailformat"])
             log.log(language.getword("filesaved",{"file":covername}))
     del img
     #Трек
     if download:
-        trackname = f"{filename}.{info['trackext']}"
+        trackname = f"{filename}.{info["trackext"]}"
         path = os.path.join(tracksfolder, trackname)
         if os.path.exists(path):
             log.log(language.getword("filealreadyexist",{"file":trackname}))
         else:
             opts = ydl_opts.soundcloud_track.copy()
-            opts['outtmpl'] = os.path.join(tracksfolder, f"{filename}.%(ext)s")
+            opts["outtmpl"] = os.path.join(tracksfolder, f"{filename}.%(ext)s")
             log.log(language.getword("downloading",{"file":trackname,"platform":"SoundCloud"}))
             with yt_dlp.YoutubeDL(opts) as ydl:
                 while True:
@@ -188,12 +191,12 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
     if os.path.exists(path) and not updateinfo:
         log.log(language.getword("filealreadyexist",{"file":infoname}))
     else:
-        with open(path, "w", encoding="ascii") as f:
-            json.dump(info, f, separators=(",", ":"), ensure_ascii=True)
+        with open(path, "w", encoding="ascii") as file:
+            json.dump(info, file, separators=(",", ":"), ensure_ascii=True)
         log.log(language.getword("filecreated",{"file":infoname}))
     return filename
 #Плейлист SoundCloud
-def download_soundcloud_playlist(url, infofolder="."):
+def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
     info = None
     log.log(language.getword("obtaininginfo"))
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
@@ -206,24 +209,27 @@ def download_soundcloud_playlist(url, infofolder="."):
                 time.sleep(ErrorSleep)
     entries = []
     for entry in info["entries"]:
-        entries.append(entry.get("url"))
+        entries.append({
+            "url":entry.get("url")
+        })
     info = {
-        "artists":info.get('album_artists'),
-        "title":info.get('title'),
+        "title":info.get("title"),
+        "artists":info.get("album_artists"),
+        "uploader":info.get("uploader"),
         "entries":entries,
-        "description":info.get('description'),
-        "license":info.get('license'),
-        "tags":info.get('tags'),
-        "tracks_count":info.get('playlist_count'),
-        "upload_date":info.get('upload_date'),
+        "description":info.get("description"),
+        "license":info.get("license"),
+        "tags":info.get("tags"),
+        "tracks_count":info.get("playlist_count"),
+        "upload_date":info.get("upload_date"),
         "id":info.get("id")
     }
     infoname = f"{info["id"]}.json"
     path = os.path.join(infofolder,infoname)
-    if os.path.exists(path) and not updateinfo:
+    if os.path.exists(path) and not UpdateInfo:
         log.log(language.getword("filealreadyexist",{"file":infoname}))
     else:
-        with open(path, "w", encoding="ascii") as f:
-            json.dump(info, f, separators=(",", ":"), ensure_ascii=True)
+        with open(path, "w", encoding="ascii") as file:
+            json.dump(info, file, separators=(",", ":"), ensure_ascii=True)
         log.log(language.getword("filecreated",{"file":infoname}))
-    return infoname
+    return info["id"]

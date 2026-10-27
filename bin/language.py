@@ -1,5 +1,5 @@
-from pathlib import Path
-texts_dir = Path(__file__).resolve().parent.parent / "texts"
+import pathlib,json
+texts_dir = pathlib.Path(__file__).resolve().parent.parent / "texts"
 lang={}
 def load(filename=None):
     global lang
@@ -9,14 +9,16 @@ def load(filename=None):
         return lang
     with open(file_path, "r", encoding="utf-8") as file:
         for line in file:
-            line = line[:-1]
+            line = line.replace("\n","")
             if "=" in line:
                 key, value = line.split("=", 1)
                 lang[key] = value
     return lang
-
-
-def getword(key,parametrs={}):
+def getlangs():
+    lang_files = [file.name[:-5] for file in texts_dir.glob("*.lang")]
+    return lang_files
+def getword(key,parametrs=None):
+    parametrs = {} if parametrs is None else parametrs
     if key in lang:
         text = lang[key]
         parametrs[""] = "\n"
@@ -25,5 +27,5 @@ def getword(key,parametrs={}):
     else:
         text = key
         for key, value in parametrs.items():
-            text += f"; %{key}% = \"{value}\""
+            text += f"; %{key}% = {json.dumps(value,ensure_ascii=False)}"
     return text
