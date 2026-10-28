@@ -19,10 +19,7 @@ class ydl_opts():
         **_base,
         "noplaylist": True,
         "format": "http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio",
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredquality": "192",
-        }],
+        "postprocessors": []
     }
     soundcloud_info = {
         **_base,
@@ -42,35 +39,32 @@ class ydl_opts():
         **_base,
         "noplaylist": True,
         "format": "bestaudio/ba/worstaudio",
-        "postprocessors": [{
-            "key": "FFmpegExtractAudio",
-            "preferredquality": "192",
-        }],
+        "postprocessors": []
     }
     youtube_video = {
         **_base,
         "noplaylist": True,
-        "format": "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best",
+        "format": "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best"
     }
     rutube_video = {
         **_base,
         "noplaylist": True,
-        "format": "bestvideo+bestaudio/best",
+        "format": "bestvideo+bestaudio/best"
     }
     rutube_info = {
         **_base,
-        "skip_download": True,
+        "skip_download": True
     }
     vk_video = {
         **_base,
         "noplaylist": True,
         "format": "best[ext=mp4]/best",
-        "format_sort": ["proto:https", "ext:mp4:m4a"],
+        "format_sort": ["proto:https", "ext:mp4:m4a"]
     }
     vk_info = {
         **_base,
         "noplaylist": True,
-        "skip_download": True,
+        "skip_download": True
     }
 def set_ffmpeg_location(path = None):
     if path is None:
@@ -110,14 +104,18 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
     if albuminfo is None:
         albuminfo = {"title":"SoundCloud"}
     info = None
-    log.log(language.getword("obtaininginfo"))
     #получение информации
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
         while info == None:
+            log.log(language.getword("obtaininginfo"))
             try:
                 info = ydl.extract_info(url, download=False)
                 log.log(language.getword("inforeceived"))
-            except Exception:
+            except Exception as Error:
+                if "404" in str(Error):
+                    log.log(language.getword("404"))
+                    
+                    return 404
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
     #информация получена её перефращииование
@@ -127,13 +125,14 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
         "title":info.get("title"),
         "artists":info.get("artists"),
         "uploader":info.get("uploader"),
-        "trackext":info.get("ext"),
+        "trackext":info.get("audio_ext"),
         "albuminfo":albuminfo,
         "description":info.get("description"),
         "license":info.get("license"),
         "thumbnail":info.get("thumbnail"),
         "tags":info.get("tags"),
         "upload_date":info.get("upload_date"),
+        "duration":info.get("duration"),
         "authorfromurl":path_parts[-2],
         "titlefromurl":path_parts[-1].split("?")[0]
     }
@@ -144,8 +143,8 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
     #изображение
     response = None
     log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
-    log.log(language.getword("obtaininginfo"))
     while not response:
+        log.log(language.getword("obtaininginfo"))
         try:
             response = requests.get(info["thumbnail"])
             log.log(language.getword("inforeceived"))
@@ -175,9 +174,9 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
         else:
             opts = ydl_opts.soundcloud_track.copy()
             opts["outtmpl"] = os.path.join(tracksfolder, f"{filename}.%(ext)s")
-            log.log(language.getword("downloading",{"file":trackname,"platform":"SoundCloud"}))
             with yt_dlp.YoutubeDL(opts) as ydl:
                 while True:
+                    log.log(language.getword("downloading",{"file":trackname,"platform":"SoundCloud"}))
                     try:
                         ydl.download([url])
                         log.log(language.getword("filesaved",{"file":trackname}))
@@ -198,9 +197,9 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
 #Плейлист SoundCloud
 def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
     info = None
-    log.log(language.getword("obtaininginfo"))
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
         while not info:
+            log.log(language.getword("obtaininginfo"))
             try:
                 info = ydl.extract_info(url, download=False)
                 log.log(language.getword("inforeceived"))

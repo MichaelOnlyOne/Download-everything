@@ -56,7 +56,7 @@ def get_abs_or_rel(path, base=here):
     return os.path.abspath(os.path.join(base, path))
 
 defaultconfiguration ={
-    "lang":"ru_RU",
+    "lang":"en_US",
     "tracksfolder":"Music",
     "infofolder":"Info",
     "coversfolder":"Covers",
@@ -76,6 +76,7 @@ def chooselanguage():
     setlang(choose_from_list(langs,language.getword("chooselanguage",{"langscount":len(langs)}))["text"])
 if not os.path.exists(configuration_file) or os.path.getsize(configuration_file) == 0:
     configuration = defaultconfiguration
+    setlang(defaultconfiguration["lang"])
     chooselanguage()
     save_configuration()
     log.log(language.getword("filecreated",{"file":"configuration.json"}))
@@ -104,7 +105,8 @@ while True:
                     chooselanguage()
                 else:
                     print(choice["text"])
-                    inp = input(language.getword("pressentertokeep"))
+                    print(language.getword("pressentertokeep"))
+                    inp = input()
                     if inp != "":
                         configuration[choice["text"]] = inp
             if act == 2:
@@ -121,7 +123,7 @@ while True:
             os.makedirs(tempconfig["playlistsinfofolder"],exist_ok=True)
             #Просто создание папок.
             for platform in music_platforms:
-                for key in ["tracksfolder","infofolder","coversfolder","m3ufolder"]:
+                for key in ["tracksfolder","infofolder","playlistsinfofolder","coversfolder","m3ufolder"]:
                     os.makedirs(os.path.join(tempconfig[key],platform),exist_ok=True)
             for platform in video_platforms:
                 for key in ["infofolder","coversfolder"]:
@@ -147,12 +149,13 @@ while True:
                     print(language.getword("enterlinktoplaylist"))
                     links = [input()]
                 print(language.getword("playlistisalbum"))
-                playlistisalbum=input() == 1
+                playlistisalbum=input() == "1"
                 addauthornickname = False
                 if playlistisalbum:
                     print(language.getword("addauthornickname"))
-                    addauthornickname=input() == 1
-                for link in links:
+                    addauthornickname=input() == "1"
+                for index,link in enumerate(links):
+                    log.log(language.getword("progressofdowloadingplaylists",{"progress":f"{index+1}/{len(links)}","url":link}))
                     interface.download_soundcloud_playlist(link,
                     infofolder=os.path.join(tempconfig["infofolder"],"SoundCloud"),
                     tracksfolder=os.path.join(tempconfig["tracksfolder"],"SoundCloud"),
@@ -161,6 +164,7 @@ while True:
                     playlistisalbum=playlistisalbum,
                     addauthornickname=addauthornickname)
             elif choice["index"] == 2:
+                print(language.getword("dowloadoneormore"))
                 if input() == "1":
                     links = []
                     with open(listsfordownload["soundcloudtracks"], 'r', encoding='ascii') as file:
@@ -171,7 +175,8 @@ while True:
                 else:
                     print(language.getword("enterlinktomusic"))
                     links = [input()]
-                for link in links:
+                for index,link in enumerate(links):
+                    log.log(language.getword("progressofdownloadingtracks",{"progress":f"{index+1}/{len(links)}","url":link}))
                     interface.download_soundcloud_track(link,
                     infofolder=os.path.join(tempconfig["infofolder"],"SoundCloud"),
                     tracksfolder=os.path.join(tempconfig["tracksfolder"],"SoundCloud"),
@@ -191,14 +196,15 @@ while True:
                         language.getword("exit"),
                         language.getword("addlink"),
                         language.getword("removelastlink"),
-                        ],f"{choice["text"]} {links[len(links)-1] if len(links) > 0 else ""}")["index"]
+                        ],f"{choice["text"]} {links[len(links)-1] if len(links) > 0 else ""}",have_zero=True)["index"]
                     if act == 0:
                         break
                     elif act == 1:
                         print(language.getword("enterlink"))
                         links.append(input())
                     elif act == 2:
-                        del links[-1]
+                        if len(links)>0:
+                            del links[-1]
                 with open(path, 'w', encoding='ascii') as file:
                     json.dump(links, file, ensure_ascii=True)
                 
