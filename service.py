@@ -131,13 +131,13 @@ while True:
             #Выбор
             choice = choose_from_list([
                 language.getword("exit"),
-                language.getword("dowloadplaylist",{"platform":"SoundCloud"}),
-                language.getword("dowloadmusic",{"platform":"SoundCloud"})
+                language.getword("downloadplaylist",{"platform":"SoundCloud"}),
+                language.getword("downloadmusic",{"platform":"SoundCloud"})
                 ],language.getword("option.menu.2"),have_zero=True)
             if choice["index"] == 0:
                 break
             elif choice["index"] == 1:
-                print(language.getword("dowloadoneormore"))
+                print(language.getword("downloadoneormore"))
                 if input() == "1":
                     links = []
                     with open(listsfordownload["soundcloudplaylists"], 'r', encoding='ascii') as file:
@@ -155,7 +155,7 @@ while True:
                     print(language.getword("addauthornickname"))
                     addauthornickname=input() == "1"
                 for index,link in enumerate(links):
-                    log.log(language.getword("progressofdowloadingplaylists",{"progress":f"{index+1}/{len(links)}","url":link}))
+                    log.log(language.getword("progressofdownloadingplaylists",{"progress":f"{index+1}/{len(links)}","url":link}))
                     interface.download_soundcloud_playlist(link,
                     infofolder=os.path.join(tempconfig["infofolder"],"SoundCloud"),
                     tracksfolder=os.path.join(tempconfig["tracksfolder"],"SoundCloud"),
@@ -164,7 +164,7 @@ while True:
                     playlistisalbum=playlistisalbum,
                     addauthornickname=addauthornickname)
             elif choice["index"] == 2:
-                print(language.getword("dowloadoneormore"))
+                print(language.getword("downloadoneormore"))
                 if input() == "1":
                     links = []
                     with open(listsfordownload["soundcloudtracks"], 'r', encoding='ascii') as file:

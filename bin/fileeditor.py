@@ -18,7 +18,7 @@ def set_track_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
         file["comment"] = info["description"]
     if info.get("albuminfo"):
         if info["albuminfo"].get("artists"):
-            file["albumartist"] = " & ".join(info["albuminfo"]["artists"])
+            file["albumartist"] = ", ".join(info["albuminfo"]["artists"])
         elif info["albuminfo"].get("uploader"):
             file["albumartist"] = info["albuminfo"]["uploader"]
         if info["albuminfo"].get("add_author_nickname") and file.get("albumartist"):
