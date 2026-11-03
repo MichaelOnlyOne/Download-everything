@@ -89,6 +89,17 @@ else:
         for key, config in defaultconfiguration.items():
             if type(configuration.get(key)) != type(config):
                 configuration[index] = config
+def Yes_Or_No(question,defaultchoice=True):
+    choices ={
+        True: language.getword("yes")[0]
+        False: language.getword("no")[0]
+    }
+    while True:
+        choice=input(f"{question} [{choices[defaultchoice].upper()}/{choices[not defaultchoice].lower()}]:")
+        for TF in [True,False]:
+            if choice.lower().startwith(choices[TF].lower()):
+                return TF
+#Начало работы.
 setlang()
 print(language.getword("welcome"))
 while True:
@@ -137,8 +148,7 @@ while True:
             if choice["index"] == 0:
                 break
             elif choice["index"] == 1:
-                print(language.getword("downloadoneormore"))
-                if input() == "1":
+                if Yes_Or_No(language.getword("downloadoneormore"),False):
                     links = []
                     with open(listsfordownload["soundcloudplaylists"], 'r', encoding='ascii') as file:
                         links = json.load(file)
@@ -148,12 +158,10 @@ while True:
                 else:
                     print(language.getword("enterlinktoplaylist"))
                     links = [input()]
-                print(language.getword("playlistisalbum"))
-                playlistisalbum=input() == "1"
+                playlistisalbum=Yes_Or_No(language.getword("playlistisalbum"),False)
                 addauthornickname = False
                 if playlistisalbum:
-                    print(language.getword("addauthornickname"))
-                    addauthornickname=input() == "1"
+                    addauthornickname=Yes_Or_No(language.getword("addauthornickname"),False)
                 for index,link in enumerate(links):
                     log.log(language.getword("progressofdownloadingplaylists",{"progress":f"{index+1}/{len(links)}","url":link}))
                     interface.download_soundcloud_playlist(link,

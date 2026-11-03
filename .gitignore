@@ -6,4 +6,5 @@ configuration.json
 Info/
 bin/__pycache__/
 test.py
-Cookies
+Cookies/
+texts/sort.sh	

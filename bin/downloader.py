@@ -3,122 +3,114 @@ from io import BytesIO
 from PIL import Image
 from urllib.parse import urlparse
 from . import language,log
-ErrorSleep=30#Задержка перед повторной попыткой
-#Парамтеры для скачивания
+ErrorSleep=30#Задержка перед повторной попыткой.
+#Парамтеры для скачивания.
 class ydl_opts():
-    _base = {
+    base = {
         "quiet": True,
         "no_warnings": True,
         "extractor_args": {
             "youtube": {
-                "player_client": ["default", "web_embedded"]
+                "formats": ["missing_pot"]
             }
         }
     }
+    listformats = {
+        **base,
+        "listformats": True
+    }
     soundcloud_track = {
-        **_base,
+        **base,
         "noplaylist": True,
-        "format": "http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio",
-        "postprocessors": []
+        "format": "http_mp3_128/hls_mp3_128/hls_opus_64/bestaudio"
     }
     soundcloud_info = {
-        **_base,
+        **base,
         "extract_flat": "in_playlist",
         "skip_download": True,
     }
     youtube_info = {
-        **_base,
+        **base,
         "skip_download": True,
-    }   
-    youtube_cover = {
-        **_base,
-        "noplaylist": True,
-        "extract_flat": False,
     }
-    youtube_track = {
-        **_base,
+    youtube_music_track = {
+        **base,
         "noplaylist": True,
-        "format": "bestaudio/ba/worstaudio",
-        "postprocessors": []
+        "format": "bestaudio/best"
     }
     youtube_video = {
-        **_base,
+        **base,
         "noplaylist": True,
-        "format": "bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]/best"
+        "format": "bestvideo+bestaudio/best"
+    }
+    youtube_listformats = {
+        **listformats
     }
     rutube_video = {
-        **_base,
+        **base,
         "noplaylist": True,
         "format": "bestvideo+bestaudio/best"
     }
     rutube_info = {
-        **_base,
+        **rutube_video,
         "skip_download": True
     }
     vk_video = {
-        **_base,
+        **base,
         "noplaylist": True,
         "format": "best[ext=mp4]/best",
         "format_sort": ["proto:https", "ext:mp4:m4a"]
     }
     vk_info = {
-        **_base,
-        "noplaylist": True,
+        **vk_video,
         "skip_download": True
     }
+
+ydl_opts_names = [name for name in vars(ydl_opts) if not name.startswith('_')]
 def set_ffmpeg_location(path = None):
     if path is None:
         return
-    configs = [
-        ydl_opts._base,
-        ydl_opts.soundcloud_track,
-        ydl_opts.soundcloud_info,
-        ydl_opts.youtube_info,
-        ydl_opts.youtube_cover,
-        ydl_opts.youtube_track,
-        ydl_opts.youtube_video,
-        ydl_opts.rutube_video,
-        ydl_opts.rutube_info,
-        ydl_opts.vk_video,
-        ydl_opts.vk_info
-    ]
-    for config in configs:
-        config["ffmpeg_location"] = path
-def set_youtube_cookies(path):
-    configs = [
-        ydl_opts.youtube_info,
-        ydl_opts.youtube_cover,
-        ydl_opts.youtube_track,
-        ydl_opts.youtube_video
-    ]
-    
+    for opt in ydl_opts_names:
+        getattr(ydl_opts,opt)["ffmpeg_location"] = path
+def set_youtube_clients(clients=["default"]):
+    if isinstance(clients, str):
+        clients = [clients]
+    if "default" not in clients:
+        clients += ["default"]
+    for opt in ydl_opts_names:
+        getattr(ydl_opts,opt)["extractor_args"]["youtube"]["player_client"] = clients
+def set_youtube_cookies(path=""):
+    yt_opts_names = ["youtube_info","youtube_music_track","youtube_video","youtube_listformats"]
     if path and os.path.exists(path) and os.path.getsize(path) > 0:
-        for config in configs:
-            config["cookiefile"] = path
+        #Если куки нет.
+        for opt in ydl_opts_names:
+            getattr(ydl_opts,opt)["cookiefile"] = path
     else:
-        for config in configs:
-            config.pop("cookiefile", None)
-#Параметры для скачивания конец
-#Трек SoundCloud
-def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",coversfolder=".",albuminfo=None,updateinfo=False,tracknumber=None):
+        #Если куки есть.
+        for opt in ydl_opts_names:
+            getattr(ydl_opts,opt).pop("cookiefile", None)
+#Параметры для скачивания конец.
+#Трек SoundCloud.
+def get_soundcloud_track(url,infofolder=".",download=True,tracksfolder=".",coversfolder=".",albuminfo=None,updateinfo=False,tracknumber=None):
     if albuminfo is None:
         albuminfo = {"title":"SoundCloud"}
     info = None
-    #получение информации
-    with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
+    #Получение информации и скачивание.
+    opts = ydl_opts.soundcloud_track.copy()
+    opts["outtmpl"] = os.path.join(tracksfolder, ".TEMP.%(ext)s")
+    with yt_dlp.YoutubeDL(opts) as ydl:
         while info == None:
-            log.log(language.getword("obtaininginfo"))
+            log.log(language.getword("obtaininginfoanddownloading"))
             try:
-                info = ydl.extract_info(url, download=False)
+                info = ydl.extract_info(url,download=download)
                 log.log(language.getword("inforeceived"))
             except Exception as Error:
-                if "404" in str(Error):
-                    log.log(language.getword("404"))
-                    
-                    return 404
+                if "403" not in str(Error) and "429" not in str(Error):
+                    log.log(language.getword("error"))
+                    return None
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
-    #информация получена её перефращииование
+    #Информация получена, её пеоеформатирование.
     normal_url = info.get("webpage_url", url)
     path_parts = [p for p in urlparse(normal_url).path.split("/") if p]
     info = {
@@ -140,61 +132,46 @@ def get_soundcloud_track(url,infofolder=".", download=True,tracksfolder=".",cove
         info["tracknumber"] = tracknumber
     del normal_url,path_parts
     filename = f"{info["authorfromurl"]} {info["titlefromurl"]}"
+    
+    infopath = os.path.join(infofolder,f"{filename}.json")
+    #Перемещение трека
+    if download:
+        os.replace(os.path.join(tracksfolder, f".TEMP.{info['trackext']}"),os.path.join(tracksfolder, f"{filename}.{info['trackext']}"))
     #изображение
-    response = None
-    log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
-    while not response:
-        log.log(language.getword("obtaininginfo"))
-        try:
-            response = requests.get(info["thumbnail"])
-            log.log(language.getword("inforeceived"))
-        except Exception:
-            log.log(language.getword("retrying",{"time":ErrorSleep}))
-            time.sleep(ErrorSleep)
-    img = Image.open(BytesIO(response.content))
-    del response
-    info["thumbnailext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
-    info["thumbnailformat"] = img.format
-    if download:
-        covername=f"{filename}.{info["thumbnailext"]}"
-        path = os.path.join(coversfolder,covername)
-        if os.path.exists(path):
-            log.log(language.getword("filealreadyexist",{"file":covername}))
-        else:
-            img = img.convert("RGB")
-            img.save(path,info["thumbnailformat"])
-            log.log(language.getword("filesaved",{"file":covername}))
-    del img
-    #Трек
-    if download:
-        trackname = f"{filename}.{info["trackext"]}"
-        path = os.path.join(tracksfolder, trackname)
-        if os.path.exists(path):
-            log.log(language.getword("filealreadyexist",{"file":trackname}))
-        else:
-            opts = ydl_opts.soundcloud_track.copy()
-            opts["outtmpl"] = os.path.join(tracksfolder, f"{filename}.%(ext)s")
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                while True:
-                    log.log(language.getword("downloading",{"file":trackname,"platform":"SoundCloud"}))
-                    try:
-                        ydl.download([url])
-                        log.log(language.getword("filesaved",{"file":trackname}))
-                        break
-                    except Exception:
-                        log.log(language.getword("retrying",{"time":ErrorSleep}))
-                        time.sleep(ErrorSleep)
-                        
-    infoname = f"{filename}.json"
-    path = os.path.join(infofolder,infoname)
-    if os.path.exists(path) and not updateinfo:
-        log.log(language.getword("filealreadyexist",{"file":infoname}))
+    if download or not os.path.exists(infopath):
+        response = None
+        log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
+        while not response:
+            log.log(language.getword("obtaininginfo"))
+            try:
+                response = requests.get(info["thumbnail"])
+                log.log(language.getword("inforeceived"))
+            except Exception:
+                log.log(language.getword("retrying",{"time":ErrorSleep}))
+                time.sleep(ErrorSleep)
+        img = Image.open(BytesIO(response.content))
+        del response
+        info["thumbnailext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
+        info["thumbnailformat"] = img.format
+        if download:
+            covername=f"{filename}.{info["thumbnailext"]}"
+            path = os.path.join(coversfolder,covername)
+            if os.path.exists(path):
+                log.log(language.getword("filealreadyexist",{"file":covername}))
+            else:
+                img = img.convert("RGB")
+                img.save(path,info["thumbnailformat"])
+                log.log(language.getword("filesaved",{"file":covername}))
+    
+    #Сохранения json с данными
+    if os.path.exists(infopath) and not updateinfo and download:
+        log.log(language.getword("filealreadyexist",{"file":filename+".json"}))
     else:
-        with open(path, "w", encoding="ascii") as file:
+        with open(infopath, "w", encoding="ascii") as file:
             json.dump(info, file, separators=(",", ":"), ensure_ascii=True)
-        log.log(language.getword("filecreated",{"file":infoname}))
+        log.log(language.getword("filecreated",{"file":filename+".json"}))
     return filename
-#Плейлист SoundCloud
+#Плейлист SoundCloud.
 def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
     info = None
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
@@ -203,7 +180,10 @@ def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
             try:
                 info = ydl.extract_info(url, download=False)
                 log.log(language.getword("inforeceived"))
-            except Exception:
+            except Exception as Error:
+                if "403" not in str(Error) and "429" not in str(Error):
+                    log.log(language.getword("error"))
+                    return None
                 log(log_tag, f"Повторная попытка через {ErrorSleep} секунд.")
                 time.sleep(ErrorSleep)
     entries = []
@@ -232,3 +212,6 @@ def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
             json.dump(info, file, separators=(",", ":"), ensure_ascii=True)
         log.log(language.getword("filecreated",{"file":infoname}))
     return info["id"]
+
+#Видео ВКонтакте
+#Видео RuTube

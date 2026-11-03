@@ -1,11 +1,17 @@
 from . import fileeditor,downloader,log,language
 import os,json
+
+
 def download_soundcloud_track(url,infofolder=".",tracksfolder=".",coversfolder="."):
     filename = downloader.get_soundcloud_track(url,infofolder=infofolder,tracksfolder=tracksfolder,coversfolder=coversfolder)
-    if filename != 404:
+    if not filename is None:
         fileeditor.set_track_tags(filename,infofolder,tracksfolder,coversfolder)
+
 def download_soundcloud_playlist(url,infofolder=".",tracksfolder=".",coversfolder=".",playlistsinfofolder=".",playlistisalbum=False,addauthornickname=False):
     infoname = downloader.download_soundcloud_playlist(url,playlistsinfofolder)
+    if infoname is None:
+        return
+    
     playlistinfo = {}
     with open(os.path.join(playlistsinfofolder,f"{infoname}.json"), "r", encoding="ascii") as file:
         playlistinfo = json.load(file)
