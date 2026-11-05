@@ -51,19 +51,10 @@ class ydl_opts():
         "noplaylist": True,
         "format": "bestvideo+bestaudio/best"
     }
-    rutube_info = {
-        **rutube_video,
-        "skip_download": True
-    }
     vk_video = {
         **base,
         "noplaylist": True,
-        "format": "best[ext=mp4]/best",
-        "format_sort": ["proto:https", "ext:mp4:m4a"]
-    }
-    vk_info = {
-        **vk_video,
-        "skip_download": True
+        "format": "bestvideo+bestaudio/best"
     }
 
 ydl_opts_names = [name for name in vars(ydl_opts) if not name.startswith('_')]
@@ -94,10 +85,10 @@ def set_youtube_cookies(path=""):
 def get_soundcloud_track(url,infofolder=".",download=True,tracksfolder=".",coversfolder=".",albuminfo=None,updateinfo=False,tracknumber=None):
     if albuminfo is None:
         albuminfo = {"title":"SoundCloud"}
-    info = None
     #Получение информации и скачивание.
     opts = ydl_opts.soundcloud_track.copy()
     opts["outtmpl"] = os.path.join(tracksfolder, ".TEMP.%(ext)s")
+    info = None
     with yt_dlp.YoutubeDL(opts) as ydl:
         while info == None:
             log.log(language.getword("obtaininginfoanddownloading"))
@@ -117,11 +108,11 @@ def get_soundcloud_track(url,infofolder=".",download=True,tracksfolder=".",cover
         "title":info.get("title"),
         "artists":info.get("artists"),
         "uploader":info.get("uploader"),
-        "trackext":info.get("audio_ext"),
+        "audioext":info.get("audio_ext"),
         "albuminfo":albuminfo,
         "description":info.get("description"),
         "license":info.get("license"),
-        "thumbnail":info.get("thumbnail"),
+        "thumbnail":[thumbnail["url"] for thumbnail in info.get("thumbnails") if thumbnail["id"] == "original"][0], #info.get("thumbnails") тоже работает, но так надеёжнее. + У меня паранойя.
         "tags":info.get("tags"),
         "upload_date":info.get("upload_date"),
         "duration":info.get("duration"),
@@ -136,32 +127,28 @@ def get_soundcloud_track(url,infofolder=".",download=True,tracksfolder=".",cover
     infopath = os.path.join(infofolder,f"{filename}.json")
     #Перемещение трека
     if download:
-        os.replace(os.path.join(tracksfolder, f".TEMP.{info['trackext']}"),os.path.join(tracksfolder, f"{filename}.{info['trackext']}"))
+        os.replace(os.path.join(tracksfolder, f".TEMP.{info['audioext']}"),os.path.join(tracksfolder, f"{filename}.{info['audioext']}"))
     #изображение
-    if download or not os.path.exists(infopath):
-        response = None
+    info["imagext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
+    if download:
         log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
-        while not response:
-            log.log(language.getword("obtaininginfo"))
-            try:
-                response = requests.get(info["thumbnail"])
-                log.log(language.getword("inforeceived"))
-            except Exception:
-                log.log(language.getword("retrying",{"time":ErrorSleep}))
-                time.sleep(ErrorSleep)
-        img = Image.open(BytesIO(response.content))
-        del response
-        info["thumbnailext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
-        info["thumbnailformat"] = img.format
-        if download:
-            covername=f"{filename}.{info["thumbnailext"]}"
-            path = os.path.join(coversfolder,covername)
-            if os.path.exists(path):
-                log.log(language.getword("filealreadyexist",{"file":covername}))
-            else:
-                img = img.convert("RGB")
-                img.save(path,info["thumbnailformat"])
-                log.log(language.getword("filesaved",{"file":covername}))
+        covername=f"{filename}.{info["imagext"]}"
+        path = os.path.join(coversfolder,covername)
+        if os.path.exists(path):
+            log.log(language.getword("filealreadyexist",{"file":covername}))
+        else:
+            response = None
+            while not response:
+                log.log(language.getword("obtaininginfo"))
+                try:
+                    response = requests.get(info["thumbnail"])
+                    log.log(language.getword("inforeceived"))
+                except Exception:
+                    log.log(language.getword("retrying",{"time":ErrorSleep}))
+                    time.sleep(ErrorSleep)
+            with open(path, "wb") as file:
+                file.write(response.content)
+            log.log(language.getword("filesaved",{"file":covername}))
     
     #Сохранения json с данными
     if os.path.exists(infopath) and not updateinfo and download:
@@ -214,4 +201,63 @@ def download_soundcloud_playlist(url, infofolder=".",UpdateInfo=True):
     return info["id"]
 
 #Видео ВКонтакте
+def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder="."):
+    #Получение информации и скачивание.
+    opts = ydl_opts.vk_video.copy()
+    opts["outtmpl"] = os.path.join(videosfolder, ".TEMP.%(ext)s")
+    info = None
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        while info == None:
+            log.log(language.getword("obtaininginfoanddownloading"))
+            try:
+                info = ydl.extract_info(url)
+                log.log(language.getword("inforeceived"))
+            except Exception as Error:
+                if "403" not in str(Error) and "429" not in str(Error):
+                    log.log(language.getword("error"))
+                    return None
+                log.log(language.getword("retrying",{"time":ErrorSleep}))
+                time.sleep(ErrorSleep)
+    #Информация получена, её пеоеформатирование.
+    filename = [p for p in urlparse(info.get("webpage_url", url)).path.split("/") if p][0]
+    info = {
+        "title":info.get("title"),
+        "uploader":info.get("uploader"),
+        "videoext":info.get("ext"),
+        "description":info.get("description"),
+        "thumbnail":info.get("thumbnails")[-1]["url"],
+        "upload_date":info.get("upload_date"),
+        "duration":info.get("duration"),
+    }
+    infopath = os.path.join(infofolder,f"{filename}.json")
+    #изображение
+    info["imagext"] = os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
+    log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
+    covername=f"{filename}.{info["imagext"]}"
+    path = os.path.join(coversfolder,covername)
+    if os.path.exists(path):
+        log.log(language.getword("filealreadyexist",{"file":covername}))
+    else:
+        response = None
+        while not response:
+            log.log(language.getword("obtaininginfo"))
+            try:
+                response = requests.get(info["thumbnail"])
+                log.log(language.getword("inforeceived"))
+            except Exception:
+                log.log(language.getword("retrying",{"time":ErrorSleep}))
+                time.sleep(ErrorSleep)
+        with open(path, "wb") as file:
+                file.write(response.content)
+        log.log(language.getword("filesaved",{"file":covername}))
+    #Перемещение видео.
+    os.replace(os.path.join(videosfolder, f".TEMP.{info['videoext']}"),os.path.join(videosfolder, f"{filename}.{info['videoext']}"))
+    #Сохранение получиной информации
+    infoname = f"{filename}.json"
+    path = os.path.join(infofolder,infoname)
+    with open(path, "w", encoding="ascii") as file:
+        json.dump(info, file, separators=(",", ":"), ensure_ascii=True)
+    log.log(language.getword("filecreated",{"file":infoname}))
+    #конец
+    return filename
 #Видео RuTube
