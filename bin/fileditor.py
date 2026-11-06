@@ -1,9 +1,7 @@
 import music_tag,os,json,mutagen
 from . import log,language
-def set_audio_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
-    info = {}
-    with open(os.path.join(infofolder,f"{filename}.json"), "r", encoding="ascii") as file:
-        info = json.load(file)
+#Просто применние метаданных.
+def set_audio_tags(filename,info,tracksfolder="."):
     file = music_tag.load_file(os.path.join(tracksfolder,f"{filename}.{info["audioext"]}"))
     file["title"] = info["title"]
     if info["artists"]:
@@ -14,7 +12,7 @@ def set_audio_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
         file["year"] = int(info["upload_date"][:4])
     if info.get("tags"):
         file["genre"] = ", ".join(info["tags"])
-    if info.get("description"):
+    if info.get("description") and info.get("description") != "":
         file["comment"] = info["description"]
     if info.get("albuminfo"):
         if info["albuminfo"].get("artists"):
@@ -29,13 +27,10 @@ def set_audio_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
             file["totaltracks"] = info["albuminfo"]["tracks_count"]
     if isinstance(info.get("tracknumber"), int):
         file["tracknumber"] = info["tracknumber"]
-    with open(os.path.join(coversfolder,f"{filename}.{info["imagext"]}"), "rb") as img:
-        file["artwork"] = img.read()
+    if info.get("image"):
+        file["artwork"] = info["image"]
     file.save()
-def set_video_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
-    info = {}
-    with open(os.path.join(infofolder,f"{filename}.json"), "r", encoding="ascii") as file:
-        info = json.load(file)
+def set_video_tags(filename,info,tracksfolder="."):
     file = os.path.join(tracksfolder,f"{filename}.{info["videoext"]}")
     if info["videoext"] == "mp4":
         file = mutagen.mp4.MP4(file)
@@ -47,8 +42,22 @@ def set_video_tags(filename,infofolder=".",tracksfolder=".",coversfolder="."):
         if info.get("description"):
             file["desc"] = [info["description"]]
             file["\xa9cmt"] = [info["description"]]
-        with open(os.path.join(coversfolder,f"{filename}.{info["imagext"]}"), "rb") as img:
-            file["covr"] = [img.read()]
+        if info.get("image"):
+            file["covr"] = [info["image"]]
         file.save()
     else:
         log.log(language.getword("unknownformat"))
+#Применение метаданных из файлов.
+def set_tags_from_files(filename,tagstype="audio",infofolder=".",tracksfolder=".",coversfolder="."):
+    info = {}
+    with open(os.path.join(infofolder,f"{filename}.json"), "r", encoding="ascii") as file:
+        info = json.load(file)
+    with open(os.path.join(coversfolder,f"{filename}.{info["imagext"]}"), "rb") as image:
+        info["image"] = image.read()
+    if tagstype == "audio":
+        set_audio_tags(filename,info,tracksfolder)
+    elif tagstype == "video":
+        set_video_tags(filename,info,tracksfolder)
+    else:
+        log.log(language.getword("invalidvalue",{"key":"tagstype","value":tagstype}))
+        pass
