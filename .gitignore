@@ -1,10 +1,10 @@
 log.txt
-download lists
+test.py
+configuration.json
+texts/sort.sh
+download lists/
 Music/
 Covers/
-configuration.json
 Info/
-bin/__pycache__/
-test.py
 Cookies/
-texts/sort.sh
+bin/__pycache__/

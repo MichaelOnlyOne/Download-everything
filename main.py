@@ -20,7 +20,18 @@ def choose_from_list(choices,title=None,have_zero=False):
         }
     else:
         return choose_from_list(choices,title,have_zero)
-
+def Yes_Or_No(question,defaultchoice=True):
+    choices ={
+        True: language.getword("yes")[0],
+        False: language.getword("no")[0]
+    }
+    while True:
+        choice=input(f"{question} [{choices[defaultchoice].upper()}/{choices[not defaultchoice].lower()}]:")
+        if choice == "":
+            return defaultchoice
+        for TF in [True,False]:
+            if choice.lower().startswith(choices[TF].lower()):
+                return TF
 #микрофункции конец
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -89,16 +100,6 @@ else:
         for key, config in defaultconfiguration.items():
             if type(configuration.get(key)) != type(config):
                 configuration[index] = config
-def Yes_Or_No(question,defaultchoice=True):
-    choices ={
-        True: language.getword("yes")[0],
-        False: language.getword("no")[0]
-    }
-    while True:
-        choice=input(f"{question} [{choices[defaultchoice].upper()}/{choices[not defaultchoice].lower()}]:")
-        for TF in [True,False]:
-            if choice.lower().startswith(choices[TF].lower()):
-                return TF
 #Начало работы.
 setlang()
 print(language.getword("welcome"))

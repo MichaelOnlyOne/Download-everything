@@ -25,8 +25,8 @@ def set_audio_tags(filename,info,tracksfolder="."):
             file["album"] = info["albuminfo"]["title"]
         if isinstance(info["albuminfo"].get("tracks_count"), int):
             file["totaltracks"] = info["albuminfo"]["tracks_count"]
-    if isinstance(info.get("tracknumber"), int):
-        file["tracknumber"] = info["tracknumber"]
+    if isinstance(info.get("trackindex"), int):
+        file["trackindex"] = info["trackindex"]
     if info.get("image"):
         file["artwork"] = info["image"]
     file.save()

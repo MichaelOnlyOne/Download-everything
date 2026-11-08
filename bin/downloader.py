@@ -82,7 +82,7 @@ def set_youtube_cookies(path=""):
             getattr(ydl_opts,opt).pop("cookiefile",None)
 #Параметры для скачивания конец.
 #Трек SoundCloud.
-def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",coversfolder=".",albuminfo=None,updateinfo=False,tracknumber=None,nosavemode=False):
+def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",coversfolder=".",albuminfo=None,update=False,trackindex=None,nosavemode=False):
     if albuminfo is None:
         albuminfo={"title":"SoundCloud"}
     #Получение информации и скачивание.
@@ -98,7 +98,7 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
             except Exception as Error:
                 if "403" not in str(Error) and "429" not in str(Error):
                     log.log(language.getword("error"))
-                    return None
+                    return None, None
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
     #Информация получена,её пеоеформатирование.
@@ -119,8 +119,8 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
         "authorfromurl":path_parts[-2],
         "titlefromurl":path_parts[-1].split("?")[0]
     }
-    if isinstance(tracknumber,int):
-        info["tracknumber"]=tracknumber
+    if isinstance(trackindex,int):
+        info["trackindex"]=trackindex
     del normal_url,path_parts
     filename=f"{info["authorfromurl"]} {info["titlefromurl"]}"
     infopath=os.path.join(infofolder,f"{filename}.json")
@@ -128,7 +128,14 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
     if onlyfilename:
         return filename,info["audioext"]
     #Перемещение трека
-    os.replace(os.path.join(tracksfolder,f".TEMP.{info['audioext']}"),os.path.join(tracksfolder,f"{filename}.{info['audioext']}"))
+    temp = os.path.join(tracksfolder,f".TEMP.{info['audioext']}")
+    path = os.path.join(tracksfolder,f"{filename}.{info['audioext']}")
+    if not update and os.path.exists(path):
+        os.remove(temp)
+        log.log(language.getword("filealreadyexist",{"file":f"{filename}.{info['audioext']}"}))
+        return None, None
+    else:
+        os.replace(temp,path)
     #Получение изображения.
     info["imagext"]=os.path.splitext(urlparse(info["thumbnail"]).path)[1].lstrip(".").lower()
     log.log(language.getword("linktoimage",{"link":info["thumbnail"]}))
@@ -156,15 +163,15 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
     if nosavemode:
         return filename,info
     #Сохранения json с данными
-    if os.path.exists(infopath) and not updateinfo:
+    if os.path.exists(infopath) and not update:
         log.log(language.getword("filealreadyexist",{"file":filename+".json"}))
     else:
         with open(infopath,"w",encoding="ascii") as file:
             json.dump(info,file,separators=(",",":"),ensure_ascii=True)
         log.log(language.getword("filecreated",{"file":filename+".json"}))
-    return filename
+    return filename, None
 #Плейлист SoundCloud.
-def download_soundcloud_playlist(url,infofolder=".",UpdateInfo=True,nosavemode=False):
+def download_soundcloud_playlist(url,infofolder=".",update=True,nosavemode=False):
     #Получение информации.
     info=None
     with yt_dlp.YoutubeDL(ydl_opts.soundcloud_info) as ydl:
@@ -199,7 +206,7 @@ def download_soundcloud_playlist(url,infofolder=".",UpdateInfo=True,nosavemode=F
     #Сохранения json с данными.
     infoname=f"{info["id"]}.json"
     path=os.path.join(infofolder,infoname)
-    if os.path.exists(path) and not UpdateInfo:
+    if os.path.exists(path) and not update:
         log.log(language.getword("filealreadyexist",{"file":infoname}))
     else:
         with open(path,"w",encoding="ascii") as file:
@@ -222,7 +229,7 @@ def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode
             except Exception as Error:
                 if "403" not in str(Error) and "429" not in str(Error):
                     log.log(language.getword("error"))
-                    return None
+                    return
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
     #Информация получена,её пеоеформатирование.
@@ -271,7 +278,7 @@ def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode
         json.dump(info,file,separators=(",",":"),ensure_ascii=True)
     log.log(language.getword("filecreated",{"file":infoname}))
     #конец
-    return filename
+    return filename, None
 #Видео RuTube
 def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode=False):
     #Получение информации и скачивание.
@@ -287,7 +294,7 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
             except Exception as Error:
                 if "403" not in str(Error) and "429" not in str(Error):
                     log.log(language.getword("error"))
-                    return None
+                    return None, None
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
     #Информация получена,её пеоеформатирование.
@@ -329,7 +336,7 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
     os.replace(os.path.join(videosfolder,f".TEMP.{info['videoext']}"),os.path.join(videosfolder,f"{filename}.{info['videoext']}"))
     #nosavemode.
     if nosavemode:
-        filename,info
+        return filename,info
     #Сохранение получиной информации
     infoname=f"{filename}.json"
     path=os.path.join(infofolder,infoname)
@@ -337,4 +344,4 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
         json.dump(info,file,separators=(",",":"),ensure_ascii=True)
     log.log(language.getword("filecreated",{"file":infoname}))
     #конец
-    return filename
+    return filename, None
