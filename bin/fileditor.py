@@ -4,7 +4,7 @@ from . import log,language
 def set_audio_tags(filename,info,tracksfolder="."):
     file = music_tag.load_file(os.path.join(tracksfolder,f"{filename}.{info["audioext"]}"))
     file["title"] = info["title"]
-    if info["artists"]:
+    if info.get("artists"):
         file["artist"] = " & ".join(info["artists"])
     else:
         file["artist"] = info["uploader"]
@@ -35,7 +35,9 @@ def set_video_tags(filename,info,tracksfolder="."):
     if info["videoext"] == "mp4":
         file = mutagen.mp4.MP4(file)
         file["\xa9nam"] = [info["title"]]
-        if info.get("uploader"):
+        if info.get("artists"):
+            file["\xa9ART"] = " & ".join(info["artists"])
+        elif info.get("uploader"):
             file["\xa9ART"] = info["uploader"]
         if info.get("upload_date"):
             file["\xa9day"] = [info["upload_date"][:4]]
