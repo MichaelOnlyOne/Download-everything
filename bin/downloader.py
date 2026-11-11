@@ -32,6 +32,7 @@ class ydl_opts():
     youtube_info={
         **base,
         "skip_download": True,
+        'format': 'all'
     }
     youtube_music_track={
         **base,
@@ -116,13 +117,13 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
         "tags":info.get("tags"),
         "upload_date":info.get("upload_date"),
         "duration":info.get("duration"),
-        "authorfromurl":path_parts[-2],
-        "titlefromurl":path_parts[-1].split("?")[0]
+        "author_from_url":path_parts[-2],
+        "title_from_url":path_parts[-1].split("?")[0]
     }
     if isinstance(trackindex,int):
         info["trackindex"]=trackindex
     del normal_url,path_parts
-    filename=f"{info["authorfromurl"]} {info["titlefromurl"]}"
+    filename=f"{info["author_from_url"]} {info["title_from_url"]}"
     infopath=os.path.join(infofolder,f"{filename}.json")
     #onlyfilename
     if onlyfilename:
@@ -145,7 +146,7 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while not response:
+        while response is None and response.status_code // 100 == 200:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -215,10 +216,10 @@ def download_soundcloud_playlist(url,infofolder=".",update=True,nosavemode=False
     return info["id"]
 
 #Видео ВКонтакте
-def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode=False):
+def get_vk_video(url,infofolder=".",tracksfolder=".",coversfolder=".",nosavemode=False):
     #Получение информации и скачивание.
     opts=ydl_opts.vk_video.copy()
-    opts["outtmpl"]=os.path.join(videosfolder,".TEMP.%(ext)s")
+    opts["outtmpl"]=os.path.join(tracksfolder,".TEMP.%(ext)s")
     info=None
     with yt_dlp.YoutubeDL(opts) as ydl:
         while info==None:
@@ -253,7 +254,7 @@ def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while not response:
+        while response is None and response.status_code // 100 == 200:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -268,7 +269,7 @@ def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode
                     file.write(response.content)
             log.log(language.getword("filesaved",{"file":covername}))
     #Перемещение видео.
-    os.replace(os.path.join(videosfolder,f".TEMP.{info['videoext']}"),os.path.join(videosfolder,f"{filename}.{info['videoext']}"))
+    os.replace(os.path.join(tracksfolder,f".TEMP.{info['videoext']}"),os.path.join(tracksfolder,f"{filename}.{info['videoext']}"))
     #Сохранение получиной информации
     if nosavemode:
         return filename,info
@@ -279,11 +280,12 @@ def get_vk_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode
     log.log(language.getword("filecreated",{"file":infoname}))
     #конец
     return filename, None
+
 #Видео RuTube
-def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosavemode=False):
+def get_rutube_video(url,infofolder=".",tracksfolder=".",coversfolder=".",nosavemode=False):
     #Получение информации и скачивание.
     opts=ydl_opts.rutube_video.copy()
-    opts["outtmpl"]=os.path.join(videosfolder,".TEMP.%(ext)s")
+    opts["outtmpl"]=os.path.join(tracksfolder,".TEMP.%(ext)s")
     info=None
     with yt_dlp.YoutubeDL(opts) as ydl:
         while info==None:
@@ -318,7 +320,7 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while not response:
+        while response is None and response.status_code // 100 == 200:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -333,7 +335,7 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
                 file.write(response.content)
             log.log(language.getword("filesaved",{"file":covername}))
     #Перемещение видео.
-    os.replace(os.path.join(videosfolder,f".TEMP.{info['videoext']}"),os.path.join(videosfolder,f"{filename}.{info['videoext']}"))
+    os.replace(os.path.join(tracksfolder,f".TEMP.{info['videoext']}"),os.path.join(tracksfolder,f"{filename}.{info['videoext']}"))
     #nosavemode.
     if nosavemode:
         return filename,info
@@ -345,3 +347,69 @@ def get_rutube_video(url,infofolder=".",videosfolder=".",coversfolder=".",nosave
     log.log(language.getword("filecreated",{"file":infoname}))
     #конец
     return filename, None
+#Видео ютуб
+def get_youtube_video(url,infofolder=".",onlyfilename=False,tracksfolder=".",coversfolder=".",albuminfo=None,update=False,trackindex=None,nosavemode=False):
+    if albuminfo is None:
+        albuminfo={"title":"YouTube"}
+    #Получение информации и скачивание.
+    opts=ydl_opts.youtube_info.copy()
+    #opts["outtmpl"]=os.path.join(tracksfolder,".TEMP.%(ext)s")
+    info=None
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        while info==None:
+            log.log(language.getword("obtaininginfoanddownloading"))
+            try:
+                info=ydl.extract_info(url,download=False)
+                log.log(language.getword("inforeceived"))
+            except Exception as Error:
+                if "403" not in str(Error) and "429" not in str(Error):
+                    log.log(language.getword("error"))
+                    return None, None
+                log.log(language.getword("retrying",{"time":ErrorSleep}))
+                time.sleep(ErrorSleep)
+    #Информация получена,её пеоеформатирование.
+    filename = f"{info['channel_id']} {info["id"]}"
+    if onlyfilename:
+        return filename,None
+    thumbnails = info["thumbnails"]
+    info={
+        "title":info.get("title"),
+        "artists":info.get("creators"),
+        "uploader":info.get("uploader"),
+        "audioext":info.get("audio_ext"),
+        "albuminfo":albuminfo,
+        "description":info.get("description"),
+        "tags":info.get("tags"),
+        "upload_date":info.get("upload_date"),
+        "duration":info.get("duration")
+    }
+    if isinstance(trackindex,int):
+        info["trackindex"]=trackindex
+    
+    #изображение
+    info["imagext"]="webp"
+    covername=f"{filename}.{info["imagext"]}"
+    path=os.path.join(coversfolder,covername)
+    if not nosavemode and os.path.exists(path):
+        log.log(language.getword("filealreadyexist",{"file":covername}))
+    else:
+        for i in range(len(thumbnails)-1,-1,-1):
+            thumbnail = thumbnails[i]
+            response=None
+            while response is None and response.status_code // 100 == 200:
+                log.log(language.getword("obtaininginfo"))
+                try:
+                    response=requests.get(thumbnail.get("url"))
+                    print(thumbnail.get("url"))
+                    log.log(language.getword("inforeceived"))
+                except Exception:
+                    log.log(language.getword("retrying",{"time":ErrorSleep}))
+                    time.sleep(ErrorSleep)
+            if False:
+                if nosavemode:
+                    info["image"]=response.content
+                else:
+                    with open(path,"wb") as file:
+                        file.write(response.content)
+                    log.log(language.getword("filesaved",{"file":covername}))
+            break
