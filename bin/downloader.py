@@ -146,7 +146,7 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while response is None and response.status_code // 100 == 200:
+        while response is None:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -254,7 +254,7 @@ def get_vk_video(url,infofolder=".",tracksfolder=".",coversfolder=".",nosavemode
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while response is None and response.status_code // 100 == 200:
+        while response is None:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -320,7 +320,7 @@ def get_rutube_video(url,infofolder=".",tracksfolder=".",coversfolder=".",nosave
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while response is None and response.status_code // 100 == 200:
+        while response is None:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
@@ -396,7 +396,7 @@ def get_youtube_video(url,infofolder=".",onlyfilename=False,tracksfolder=".",cov
         for i in range(len(thumbnails)-1,-1,-1):
             thumbnail = thumbnails[i]
             response=None
-            while response is None and response.status_code // 100 == 200:
+            while response is None:
                 log.log(language.getword("obtaininginfo"))
                 try:
                     response=requests.get(thumbnail.get("url"))
