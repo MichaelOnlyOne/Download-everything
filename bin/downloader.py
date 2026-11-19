@@ -146,15 +146,19 @@ def get_soundcloud_track(url,infofolder=".",onlyfilename=False,tracksfolder=".",
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while getattr(response, "status_code", 0) // 100 != 2:
+        while True:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
-                log.log(language.getword("inforeceived"))
             except Exception:
+                return None, None
+            if getattr(response, "status_code", 0) // 100 == 2:
+                log.log(language.getword("inforeceived"))
+                break
+            else:
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
-            print(getattr(response, "status_code", 0))
+                
         if nosavemode:
             info["image"]=response.content
         else:
@@ -321,12 +325,16 @@ def get_rutube_video(url,infofolder=".",tracksfolder=".",coversfolder=".",nosave
         log.log(language.getword("filealreadyexist",{"file":covername}))
     else:
         response=None
-        while getattr(response, "status_code", 0) // 100 != 2:
+        while True:
             log.log(language.getword("obtaininginfo"))
             try:
                 response=requests.get(info["thumbnail"])
-                log.log(language.getword("inforeceived"))
             except Exception:
+                return None, None
+            if getattr(response, "status_code", 0) // 100 != 2:
+                log.log(language.getword("inforeceived"))
+                break
+            else:
                 log.log(language.getword("retrying",{"time":ErrorSleep}))
                 time.sleep(ErrorSleep)
         if nosavemode:
@@ -397,13 +405,16 @@ def get_youtube_video(url,infofolder=".",onlyfilename=False,tracksfolder=".",cov
         for i in range(len(thumbnails)-1,-1,-1):
             thumbnail = thumbnails[i]
             response=None
-            while getattr(response, "status_code", 0) // 100 != 2:
+            while True:
                 log.log(language.getword("obtaininginfo"))
                 try:
-                    response=requests.get(thumbnail.get("url"))
-                    print(thumbnail.get("url"))
-                    log.log(language.getword("inforeceived"))
+                    response=requests.get(info["thumbnail"])
                 except Exception:
+                    return None, None
+                if getattr(response, "status_code", 0) // 100 != 2:
+                    log.log(language.getword("inforeceived"))
+                    break
+                else:
                     log.log(language.getword("retrying",{"time":ErrorSleep}))
                     time.sleep(ErrorSleep)
             if False:
